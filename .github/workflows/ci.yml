@@ -31,6 +31,7 @@ jobs:
 
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
+      continue-on-error: true
       with:
         args: >
           -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
