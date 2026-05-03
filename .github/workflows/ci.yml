@@ -29,5 +29,11 @@ jobs:
     - name: Run tests
       run: ./tests_runner
 
-    - name: Code quality
-      run: echo "SonarQube scan will be integrated here"
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@v2
+      with:
+        args: >
+          -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
+          -Dsonar.organization=omarosama16
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
