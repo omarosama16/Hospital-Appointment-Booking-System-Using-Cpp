@@ -38,3 +38,5 @@ This model was chosen because the project requirements were clear and stable.
 - Ahmed Mohamed
 - Nour Eldin 
 - Mohamed Salah
+
+   [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp&metric=alert_status)](https://sonarcloud.io/dashboard?id=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp)
