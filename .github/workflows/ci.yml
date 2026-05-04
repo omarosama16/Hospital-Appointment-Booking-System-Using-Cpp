@@ -42,6 +42,7 @@ jobs:
       run: |
         echo "0" | timeout 3s ./build/app || true
 
+   
     - name: Build tests
       run: |
         mkdir -p test_build
@@ -57,13 +58,19 @@ jobs:
       run: |
         timeout 10s ./test_build/tests || echo "Tests finished or timed out"
 
+
+    - name: Show source files
+      run: |
+        find src -name "*.cpp"
+
+
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
-      continue-on-error: true
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       with:
         args: >
+          -X
           -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
           -Dsonar.organization=omarosama16
           -Dsonar.sources=src
