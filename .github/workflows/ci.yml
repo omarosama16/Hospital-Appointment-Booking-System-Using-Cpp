@@ -11,36 +11,39 @@ jobs:
 
     steps:
 
+    # =========================
+    # 1. Checkout
+    # =========================
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-
-    - name: Install compiler + tools
+    # =========================
+    # 2. Install dependencies
+    # =========================
+    - name: Install tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y g++ cmake make git
+        sudo apt-get install -y g++ cmake make git libgtest-dev
 
+    # =========================
+    # 3. Configure CMake (IMPORTANT FIX)
+    # =========================
+    - name: Configure project with CMake
+      run: |
+        cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+    # =========================
+    # 4. Build project
+    # =========================
     - name: Build project
       run: |
-        mkdir -p build
-
-        g++ $(find src -name "*.cpp") \
-            -Iinclude \
-            -o build/app
-
-        echo "Build successful"
-
-
-    - name: Install GoogleTest
-      run: |
-        git clone https://github.com/google/googletest.git
-        cd googletest
-        cmake -S . -B build
         cmake --build build
-        sudo cmake --install build
 
+    # =========================
+    # 5. GoogleTest build (simple + stable)
+    # =========================
     - name: Build tests
       run: |
         mkdir -p test_build
@@ -48,8 +51,6 @@ jobs:
         g++ $(find tests -name "*.cpp") \
             $(find src -name "*.cpp") \
             -Iinclude \
-            -Igoogletest/googletest/include \
-            -L/usr/local/lib \
             -lgtest -lgtest_main -pthread \
             -o test_build/tests
 
@@ -57,6 +58,9 @@ jobs:
       run: |
         ./test_build/tests
 
+    # =========================
+    # 6. SonarCloud Scan (FIXED)
+    # =========================
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
       env:
@@ -68,4 +72,4 @@ jobs:
           -Dsonar.sources=src
           -Dsonar.tests=tests
           -Dsonar.sourceEncoding=UTF-8
-          -Dsonar.cfamily.compile-commands=build
+          -Dsonar.cfamily.compile-commands=build/compile_commands.json
