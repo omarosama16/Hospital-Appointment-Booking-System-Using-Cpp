@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.10)
-
 project(HospitalAppointmentSystem)
 
 # =========================
@@ -7,18 +6,16 @@ project(HospitalAppointmentSystem)
 # =========================
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# مهم لـ Sonar + static analysis
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # =========================
 # INCLUDE DIRECTORIES
 # =========================
 include_directories(include)
-include_directories(src)
 
 # =========================
 # CORE SOURCES (Business Logic)
+# Fixed: sources live in src/core/*.cpp, not a deeper subdir
 # =========================
 file(GLOB_RECURSE CORE_SOURCES
     src/core/*.cpp
@@ -26,42 +23,40 @@ file(GLOB_RECURSE CORE_SOURCES
 
 # =========================
 # MAIN APPLICATION
+# Fixed: Main.cpp lives at src/app/Main.cpp
 # =========================
 add_executable(app
     src/app/Main.cpp
     ${CORE_SOURCES}
 )
 
+target_include_directories(app PRIVATE include)
+
 # =========================
 # TESTS (GoogleTest)
 # =========================
 enable_testing()
-
 find_package(GTest REQUIRED)
 
 file(GLOB_RECURSE TEST_SOURCES
     tests/*.cpp
 )
 
-add_executable(runTests
-    ${TEST_SOURCES}
-    ${CORE_SOURCES}
-)
+if(TEST_SOURCES)
+    add_executable(runTests
+        ${TEST_SOURCES}
+        ${CORE_SOURCES}
+    )
 
-# correct modern GTest linking
-target_link_libraries(runTests
-    GTest::gtest
-    GTest::gtest_main
-    pthread
-)
+    target_link_libraries(runTests
+        GTest::gtest
+        GTest::gtest_main
+        pthread
+    )
 
-# include paths for tests
-target_include_directories(runTests PRIVATE
-    include
-    src
-)
+    target_include_directories(runTests PRIVATE
+        include
+    )
 
-# =========================
-# CTEST
-# =========================
-add_test(NAME AllTests COMMAND runTests)
+    add_test(NAME AllTests COMMAND runTests)
+endif()
