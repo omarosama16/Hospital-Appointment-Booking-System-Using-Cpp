@@ -1,4 +1,4 @@
-name: C++ CI Pipeline
+name: C++ CI + SonarQube Pipeline
 
 on:
   push:
