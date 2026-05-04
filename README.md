@@ -27,7 +27,7 @@ This model was chosen because the project requirements were clear and stable.
 # Technologies Used
 - C++
 - Git & GitHub
-- GitHub Actions (CI)
+- GitHub Actions (CI) 
 - SonarQube (Code Quality)
 
 # CONTRIBUTERS:
