@@ -44,8 +44,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=g++
 
       - name: Build with Build Wrapper
-        run: |
-          build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build --parallel
+        run: build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build --parallel
 
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --verbose
