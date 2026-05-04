@@ -4,11 +4,11 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "src/**"        # Fixed: was "src/" — needs /** to match files inside
-      - "include/**"    # Fixed: was "include/" — needs /**
+      - "src/**"
+      - "include/**"
       - "tests/**"
       - "CMakeLists.txt"
-      - "sonar-project.properties"  # Fixed: was a markdown hyperlink [sonar-project.properties](http://...)
+      - "sonar-project.properties"
   pull_request:
     branches: ["main"]
 
@@ -32,16 +32,22 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake g++ libgtest-dev
-          # Fixed: libgtest-dev only installs source, must build it manually
+          # libgtest-dev installs source only — must build it
           cd /usr/src/googletest
           sudo cmake .
           sudo cmake --build . --target install
 
       # =========================
       # 3. Configure project (CMake)
+      # Fixed: explicitly pass -DCMAKE_CXX_STANDARD=17 so compile_commands.json
+      # carries -std=c++17, which SonarCloud CFamily requires to analyze files
       # =========================
       - name: Configure CMake
-        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DCMAKE_CXX_STANDARD=17 \
+            -DCMAKE_CXX_COMPILER=g++
 
       # =========================
       # 4. Verify build artifacts
@@ -65,7 +71,7 @@ jobs:
       # 7. SonarCloud Analysis
       # =========================
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v3   # Fixed: v2 is outdated, use v3
+        uses: SonarSource/sonarcloud-github-action@v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
