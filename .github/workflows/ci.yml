@@ -13,7 +13,9 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -22,17 +24,17 @@ jobs:
 
       - name: Install build tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake g++ libgtest-dev
+          apt-get update
+          apt-get install -y cmake g++ libgtest-dev curl unzip git
           cd /usr/src/googletest
-          sudo cmake .
-          sudo cmake --build . --target install
+          cmake .
+          cmake --build . --target install
 
       - name: Install Sonar Build Wrapper
         run: |
           curl -sSLo /tmp/build-wrapper.zip https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
-          unzip /tmp/build-wrapper.zip -d $HOME
-          echo "$HOME/build-wrapper-linux-x86" >> $GITHUB_PATH
+          unzip /tmp/build-wrapper.zip -d /opt
+          echo "/opt/build-wrapper-linux-x86" >> $GITHUB_PATH
 
       - name: Configure CMake
         run: |
@@ -44,7 +46,7 @@ jobs:
             -G "Unix Makefiles"
 
       - name: Build with Build Wrapper
-        run: build-wrapper-linux-x86-64 --out-dir bw-output make -C build
+        run: /opt/build-wrapper-linux-x86/build-wrapper-linux-x86-64 --out-dir bw-output make -C build
 
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --verbose
