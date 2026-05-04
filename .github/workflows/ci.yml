@@ -1,4 +1,4 @@
-name: C++ CI (GoogleTest + SonarCloud)
+name: C++ CI + GoogleTest + SonarCloud
 
 on:
   push:
@@ -6,23 +6,30 @@ on:
   pull_request:
 
 jobs:
-  build-test-analyze:
+  build-test-sonar:
     runs-on: ubuntu-latest
 
     steps:
 
+    # =====================
+    # Checkout
+    # =====================
     - name: Checkout repo
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-
+    # =====================
+    # Install tools
+    # =====================
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y g++ git wget unzip
+        sudo apt-get install -y g++ cmake make git
 
-
+    # =====================
+    # Install GoogleTest
+    # =====================
     - name: Install GoogleTest
       run: |
         git clone https://github.com/google/googletest.git
@@ -31,55 +38,30 @@ jobs:
         cmake --build build
         sudo cmake --install build
 
-
-    - name: Build application
+    # =====================
+    # Build project + generate compile_commands.json
+    # =====================
+    - name: Configure CMake
       run: |
-        mkdir -p build
+        cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-        g++ $(find src -name "*.cpp") \
-            -Iinclude -Isrc/core -Isrc/app \
-            -o build/app
+    # =====================
+    # Build project
+    # =====================
+    - name: Build project
+      run: cmake --build build
 
-
-    - name: Run app
-      run: |
-        timeout 3s ./build/app || true
-
-
-    - name: Build tests
-      run: |
-        mkdir -p test_build
-
-        g++ $(find tests -name "*.cpp") \
-            $(find src -name "*.cpp") \
-            -Iinclude -Isrc/core -Isrc/app \
-            -lgtest -lgtest_main -pthread \
-            -o test_build/tests
-
-
+    # =====================
+    # Run tests
+    # =====================
     - name: Run tests
       run: |
-        ./test_build/tests || true
+        cd build
+        ctest --output-on-failure || true
 
-
-    - name: Download build wrapper (required for C++)
-      run: |
-        wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
-        unzip build-wrapper-linux-x86.zip
-        echo "$PWD/build-wrapper-linux-x86" >> $GITHUB_PATH
-
-
-    - name: Wrapped build for Sonar
-      run: |
-        mkdir -p bw-output
-
-        build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
-          --out-dir bw-output \
-          g++ $(find src -name "*.cpp") \
-          -Iinclude -Isrc/core -Isrc/app \
-          -o build/app
-
-
+    # =====================
+    # SonarCloud Scan (FIXED)
+    # =====================
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
       env:
@@ -90,6 +72,6 @@ jobs:
           -Dsonar.organization=omarosama16
           -Dsonar.sources=src
           -Dsonar.tests=tests
+          -Dsonar.cfamily.compile-commands=build/compile_commands.json
           -Dsonar.sourceEncoding=UTF-8
-          -Dsonar.cfamily.build-wrapper-output=bw-output
-          -Dsonar.exclusions=build/**,bw-output/**
+          -Dsonar.exclusions=build/**,**/googletest/**
