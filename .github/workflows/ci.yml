@@ -31,12 +31,8 @@ jobs:
       - name: Install GoogleTest
         run: sudo apt-get install -y libgtest-dev
 
-      - name: Build GoogleTest manually
-        run: |
-          cd /usr/src/gtest
-          sudo cmake .
-          sudo make
-          sudo cp *.a /usr/lib
+      - name: Install GoogleTest
+        run: sudo apt-get install -y libgtest-dev
 
       - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
