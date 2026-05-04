@@ -17,17 +17,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # =========================
-      # 1. Checkout repository
-      # =========================
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # =========================
-      # 2. Install dependencies
-      # =========================
       - name: Install build tools
         run: |
           sudo apt-get update
@@ -36,20 +30,12 @@ jobs:
           sudo cmake .
           sudo cmake --build . --target install
 
-      # =========================
-      # 3. Install Sonar Build Wrapper
-      # Keep the entire extracted folder — the binary needs its .so files
-      # =========================
       - name: Install Sonar Build Wrapper
         run: |
-          curl -sSLo /tmp/build-wrapper-linux-x86.zip \
-            https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
-          unzip /tmp/build-wrapper-linux-x86.zip -d $HOME
+          curl -sSLo /tmp/build-wrapper.zip https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
+          unzip /tmp/build-wrapper.zip -d $HOME
           echo "$HOME/build-wrapper-linux-x86" >> $GITHUB_PATH
 
-      # =========================
-      # 4. Configure CMake
-      # =========================
       - name: Configure CMake
         run: |
           cmake -S . -B build \
@@ -57,23 +43,13 @@ jobs:
             -DCMAKE_CXX_STANDARD_REQUIRED=ON \
             -DCMAKE_CXX_COMPILER=g++
 
-      # =========================
-      # 5. Build with Sonar Build Wrapper
-      # =========================
       - name: Build with Build Wrapper
         run: |
-          build-wrapper-linux-x86-64 --out-dir bw-output \
-            cmake --build build --parallel
+          build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build --parallel
 
-      # =========================
-      # 6. Run tests
-      # =========================
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --verbose
 
-      # =========================
-      # 7. SonarCloud Analysis
-      # =========================
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
         env:
