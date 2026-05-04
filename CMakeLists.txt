@@ -1,27 +1,36 @@
 cmake_minimum_required(VERSION 3.16)
-project(HospitalApp)
+
+project(HospitalAppointmentSystem CXX)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# ====== SOURCES ======
-file(GLOB_RECURSE SRC_FILES
+# ======================
+# Include directories
+# ======================
+include_directories(include)
+include_directories(src)
+
+# ======================
+# Source files
+# ======================
+file(GLOB_RECURSE APP_SOURCES
     src/core/*.cpp
     src/app/*.cpp
 )
 
-include_directories(include)
-include_directories(src)
+add_executable(app ${APP_SOURCES})
 
-add_executable(app ${SRC_FILES})
-
-# ====== TESTS (GoogleTest) ======
+# ======================
+# TESTS (GoogleTest)
+# ======================
 enable_testing()
 
-file(GLOB_RECURSE TEST_FILES
+file(GLOB_RECURSE TEST_SOURCES
     tests/*.cpp
 )
 
-add_executable(unit_tests ${SRC_FILES} ${TEST_FILES})
+add_executable(unit_tests ${APP_SOURCES} ${TEST_SOURCES})
 
 target_link_libraries(unit_tests gtest gtest_main pthread)
 
