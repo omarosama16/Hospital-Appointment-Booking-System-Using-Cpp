@@ -7,7 +7,7 @@
 #include "user.h"
 #include "Appointment.h"
 #include "Doctor.h"
-#include "core/Patient.h"
+#include "patient.h"   // Fixed: was "core/Patient.h" — file is patient.h (lowercase)
 
 using namespace std;
 
@@ -34,7 +34,7 @@ void printApptHeader()
 {
     cout << "\n"
          << left
-         << setw(5) << "ID"
+         << setw(5)  << "ID"
          << setw(20) << "Patient"
          << setw(20) << "Doctor"
          << setw(12) << "Date"
@@ -43,6 +43,7 @@ void printApptHeader()
     printLine(79, '-');
 }
 
+// Fixed: use get_role() / get_email() (snake_case) — these match user.cpp
 string getRoleByEmail(HospitalSystem &sys, const string &email)
 {
     vector<User *> users = sys.adminViewAllUsers();
@@ -51,12 +52,13 @@ string getRoleByEmail(HospitalSystem &sys, const string &email)
             return u->get_role();
     return "";
 }
+
 void listDoctors(HospitalSystem &sys)
 {
     vector<User *> users = sys.adminViewAllUsers();
     cout << "\n"
          << left
-         << setw(6) << "ID"
+         << setw(6)  << "ID"
          << setw(25) << "Doctor Name"
          << "Specialization\n";
     printLine(55, '-');
@@ -66,9 +68,11 @@ void listDoctors(HospitalSystem &sys)
     {
         if (u->get_role() == "doctor")
         {
-            cout << setw(6) << u->get_id()
+            // Cast to Doctor* to show specialization
+            Doctor *d = static_cast<Doctor *>(u);
+            cout << setw(6)  << u->get_id()
                  << setw(25) << u->get_name()
-                 << "\n";
+                 << d->getSpecialization() << "\n";
             found = true;
         }
     }
@@ -105,8 +109,6 @@ void patientMenu(HospitalSystem &sys)
             }
             pause();
         }
-
-
         else if (choice == 2)
         {
             printHeader("BOOK AN APPOINTMENT");
@@ -129,8 +131,6 @@ void patientMenu(HospitalSystem &sys)
                      << "  The slot may already be taken or the doctor ID is invalid.\n";
             pause();
         }
-
-
         else if (choice == 3)
         {
             printHeader("CANCEL AN APPOINTMENT");
@@ -161,7 +161,6 @@ void patientMenu(HospitalSystem &sys)
     } while (choice != 0);
 }
 
-
 void doctorMenu(HospitalSystem &sys)
 {
     int choice;
@@ -176,7 +175,6 @@ void doctorMenu(HospitalSystem &sys)
         cin >> choice;
         cin.ignore();
 
-        // ── 1. View schedule ──────────────────────
         if (choice == 1)
         {
             printHeader("MY SCHEDULE");
@@ -191,7 +189,6 @@ void doctorMenu(HospitalSystem &sys)
             }
             pause();
         }
-
         else if (choice == 2)
         {
             printHeader("MARK APPOINTMENT AS COMPLETED");
@@ -237,26 +234,23 @@ void adminMenu(HospitalSystem &sys)
         cin >> choice;
         cin.ignore();
 
-        // ── 1. View all users ─────────────────────
         if (choice == 1)
         {
             printHeader("ALL USERS");
             vector<User *> users = sys.adminViewAllUsers();
             cout << left
-                 << setw(5) << "ID"
+                 << setw(5)  << "ID"
                  << setw(25) << "Name"
                  << setw(30) << "Email"
                  << "Role\n";
             printLine(70, '-');
             for (auto u : users)
-                cout << setw(5) << u->get_id()
+                cout << setw(5)  << u->get_id()
                      << setw(25) << u->get_name()
                      << setw(30) << u->get_email()
                      << u->get_role() << "\n";
             pause();
         }
-
-
         else if (choice == 2)
         {
             printHeader("ALL APPOINTMENTS");
@@ -271,7 +265,6 @@ void adminMenu(HospitalSystem &sys)
             }
             pause();
         }
-
         else if (choice == 3)
         {
             printHeader("REGISTER NEW DOCTOR");
@@ -288,7 +281,6 @@ void adminMenu(HospitalSystem &sys)
                  << "  Default password: default\n";
             pause();
         }
-
         else if (choice == 4)
         {
             printHeader("REGISTER NEW PATIENT");
@@ -308,7 +300,6 @@ void adminMenu(HospitalSystem &sys)
 
     } while (choice != 0);
 }
-
 
 int main()
 {
@@ -333,7 +324,6 @@ int main()
         cin >> choice;
         cin.ignore();
 
-
         if (choice == 1)
         {
             printHeader("LOGIN");
@@ -348,6 +338,10 @@ int main()
                 string role = getRoleByEmail(sys, email);
                 cout << "\n  Login successful!  Role: " << role << "\n";
 
+                // Fixed: role strings match what constructors set
+                // patient.cpp  → "Patient"
+                // Doctor.cpp   → "doctor"
+                // admin.cpp    → "Admin"
                 if (role == "Patient")
                     patientMenu(sys);
                 else if (role == "doctor")
@@ -363,7 +357,6 @@ int main()
                 pause();
             }
         }
-
         else if (choice == 2)
         {
             printHeader("PATIENT SELF-REGISTRATION");
