@@ -16,35 +16,40 @@ jobs:
       with:
         fetch-depth: 0
 
-
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y g++ git cmake make
+        sudo apt-get install -y g++ cmake make git ninja-build
 
 
-    - name: Build project
+    - name: Install GoogleTest
       run: |
-        mkdir -p build
-        g++ -std=c++17 $(find src -name "*.cpp") -Iinclude -o build/app
+        git clone https://github.com/google/googletest.git
+        cd googletest
+        cmake -S . -B build
+        cmake --build build
+        sudo cmake --install build
 
-
-    - name: Run app
+    - name: Configure project (generate compile_commands.json)
       run: |
-        echo "0" | timeout 3s ./build/app || true
+        cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-
-    - name: Build tests
+    - name: Install Sonar Build Wrapper
       run: |
-        mkdir -p test_build
-        g++ -std=c++17 $(find tests -name "*.cpp") $(find src -name "*.cpp") \
-            -Iinclude -lgtest -lgtest_main -pthread \
-            -o test_build/tests || true
+        wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
+        unzip build-wrapper-linux-x86.zip
+
+    - name: Build with Build Wrapper
+      run: |
+        mkdir -p bw-output
+        ./build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
+          --out-dir bw-output \
+          cmake --build build
 
 
     - name: Run tests
       run: |
-        ./test_build/tests || true
+        ctest --test-dir build || true
 
 
     - name: SonarCloud Scan
@@ -57,5 +62,5 @@ jobs:
           -Dsonar.organization=omarosama16
           -Dsonar.sources=src
           -Dsonar.tests=tests
-          -Dsonar.sourceEncoding=UTF-8
-          -Dsonar.exclusions=build/**,test_build/**
+          -Dsonar.cfamily.compile-commands=build/compile_commands.json
+          -Dsonar.exclusions=build/**,bw-output/**
