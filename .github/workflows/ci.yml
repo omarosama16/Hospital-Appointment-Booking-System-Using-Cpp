@@ -30,7 +30,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake g++
 
-      # 3. Install + Build GoogleTest (FIXED)
+      # 3. Install GoogleTest (FIXED)
       - name: Install GoogleTest
         run: |
           sudo apt-get install -y libgtest-dev cmake
@@ -43,7 +43,7 @@ jobs:
       - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      # 5. (Optional debug) show build files
+      # 5. Debug compile database
       - name: Verify compile database
         run: ls -R build
 
