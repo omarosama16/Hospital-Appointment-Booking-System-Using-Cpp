@@ -17,7 +17,7 @@ The system was developed as part of the SCS253 Software Process & Quality Manage
 # Admin features
 - Add / remove doctors
 - Manage schedules
-- View all appointments
+- View all appointments 
 
 # SDLC
 We used the Waterfall Model, which follows a sequential process:
