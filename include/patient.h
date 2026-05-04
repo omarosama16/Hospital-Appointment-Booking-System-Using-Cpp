@@ -1,20 +1,20 @@
-#include <iostream>
-#include "Appointment.h"
-#include <vector>
-#include "user.h"
-using namespace std;
 #ifndef PATIENT_H
 #define PATIENT_H
-class patient : public User
+
+#include "User.h"
+#include <string>
+
+class Patient : public User
 {
 private:
-    string phone;
+    std::string phone;
 
 public:
-    patient(int id, string name, string email, string password, string phone);
-    void set_phone(string pa);
-    string get_phone();
-    ~patient() {};
-     
+    Patient(int id, std::string name, std::string email, std::string password, std::string phone);
+    void setPhone(std::string p);
+    std::string getPhone() const;
+
+    ~Patient() {}
 };
+
 #endif
