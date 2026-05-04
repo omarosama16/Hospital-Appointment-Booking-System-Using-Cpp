@@ -47,6 +47,7 @@ jobs:
           -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
           -Dsonar.organization=omarosama16
           -Dsonar.sources=src
+          -Dsonar.sourceEncoding=UTF-8
           -Dsonar.cfamily.build-wrapper-output.bypass=true
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
