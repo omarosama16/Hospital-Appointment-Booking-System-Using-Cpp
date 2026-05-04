@@ -1,4 +1,4 @@
-name: C++ CI + CMake + SonarCloud
+name: C++ CI (GoogleTest + SonarCloud)
 
 on:
   push:
@@ -6,43 +6,78 @@ on:
   pull_request:
 
 jobs:
-  build-analyze:
+  build-test-analyze:
     runs-on: ubuntu-latest
 
     steps:
 
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
+
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y g++ cmake make git wget unzip
+        sudo apt-get install -y g++ git wget unzip
 
 
-    - name: Configure project
+    - name: Install GoogleTest
       run: |
-        cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        git clone https://github.com/google/googletest.git
+        cd googletest
+        cmake -S . -B build
+        cmake --build build
+        sudo cmake --install build
 
-    - name: Install Build Wrapper
-      run: |
-        wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
-        unzip build-wrapper-linux-x86.zip
-        echo "$PWD/build-wrapper-linux-x86" >> $GITHUB_PATH
 
-    - name: Build project (wrapped)
+    - name: Build application
       run: |
-        mkdir -p bw-output
-        build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
-          --out-dir bw-output \
-          cmake --build build -j 2
+        mkdir -p build
+
+        g++ $(find src -name "*.cpp") \
+            -Iinclude -Isrc/core -Isrc/app \
+            -o build/app
 
 
     - name: Run app
       run: |
         timeout 3s ./build/app || true
+
+
+    - name: Build tests
+      run: |
+        mkdir -p test_build
+
+        g++ $(find tests -name "*.cpp") \
+            $(find src -name "*.cpp") \
+            -Iinclude -Isrc/core -Isrc/app \
+            -lgtest -lgtest_main -pthread \
+            -o test_build/tests
+
+
+    - name: Run tests
+      run: |
+        ./test_build/tests || true
+
+
+    - name: Download build wrapper (required for C++)
+      run: |
+        wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
+        unzip build-wrapper-linux-x86.zip
+        echo "$PWD/build-wrapper-linux-x86" >> $GITHUB_PATH
+
+
+    - name: Wrapped build for Sonar
+      run: |
+        mkdir -p bw-output
+
+        build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
+          --out-dir bw-output \
+          g++ $(find src -name "*.cpp") \
+          -Iinclude -Isrc/core -Isrc/app \
+          -o build/app
 
 
     - name: SonarCloud Scan
@@ -54,7 +89,7 @@ jobs:
           -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
           -Dsonar.organization=omarosama16
           -Dsonar.sources=src
+          -Dsonar.tests=tests
           -Dsonar.sourceEncoding=UTF-8
-          -Dsonar.cfamily.compile-commands=build/compile_commands.json
           -Dsonar.cfamily.build-wrapper-output=bw-output
           -Dsonar.exclusions=build/**,bw-output/**
