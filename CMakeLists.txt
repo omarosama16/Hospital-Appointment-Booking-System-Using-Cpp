@@ -15,7 +15,6 @@ include_directories(include)
 
 # =========================
 # CORE SOURCES (Business Logic)
-# Fixed: sources live in src/core/*.cpp, not a deeper subdir
 # =========================
 file(GLOB_RECURSE CORE_SOURCES
     src/core/*.cpp
@@ -23,26 +22,23 @@ file(GLOB_RECURSE CORE_SOURCES
 
 # =========================
 # MAIN APPLICATION
-# Fixed: Main.cpp lives at src/app/Main.cpp
 # =========================
 add_executable(app
     src/app/Main.cpp
     ${CORE_SOURCES}
 )
-
 target_include_directories(app PRIVATE include)
 
 # =========================
 # TESTS (GoogleTest)
 # =========================
 enable_testing()
-find_package(GTest REQUIRED)
 
-file(GLOB_RECURSE TEST_SOURCES
-    tests/*.cpp
-)
+file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
 
 if(TEST_SOURCES)
+    find_package(GTest REQUIRED)
+
     add_executable(runTests
         ${TEST_SOURCES}
         ${CORE_SOURCES}
@@ -54,9 +50,7 @@ if(TEST_SOURCES)
         pthread
     )
 
-    target_include_directories(runTests PRIVATE
-        include
-    )
+    target_include_directories(runTests PRIVATE include)
 
     add_test(NAME AllTests COMMAND runTests)
 endif()
