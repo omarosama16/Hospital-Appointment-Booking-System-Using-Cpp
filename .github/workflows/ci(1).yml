@@ -45,6 +45,15 @@ jobs:
 
       - name: Build with Build Wrapper
         run: build-wrapper-linux-x86-64 --out-dir bw-output make -C build VERBOSE=1
+        
+      - name: Debug compile_commands.json
+        run: |
+          echo "=== compile_commands.json contents ==="
+          cat bw-output/compile_commands.json
+          echo "=== g++ version ==="
+          g++-13 --version
+          echo "=== workspace ==="
+          pwd  
 
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --verbose
