@@ -25,19 +25,21 @@ jobs:
         sudo cp lib/*.a /usr/lib
 
     - name: Build main project
-      run: g++ src/*.cpp -Iinclude -o app
+      run: |
+        g++ src/app/*.cpp src/core/*.cpp -Iinclude -o app
 
     - name: Build tests
       run: |
         g++ tests/*.cpp \
-            src/*.cpp \
+            src/core/*.cpp \
             -Iinclude \
             -lgtest -lgtest_main -pthread \
             -o tests_runner
 
     - name: Run tests
-      run: ./tests_runner
+      run: timeout 5s ./tests_runner
 
+    # ☁️ SonarCloud Scan
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
       continue-on-error: true
