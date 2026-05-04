@@ -11,25 +11,25 @@ jobs:
 
     steps:
 
-    # =====================
-    # Checkout
-    # =====================
-    - name: Checkout repo
+    # ======================
+    # Checkout repo
+    # ======================
+    - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    # =====================
-    # Install tools
-    # =====================
+    # ======================
+    # Install dependencies
+    # ======================
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y g++ cmake make git
 
-    # =====================
+    # ======================
     # Install GoogleTest
-    # =====================
+    # ======================
     - name: Install GoogleTest
       run: |
         git clone https://github.com/google/googletest.git
@@ -38,30 +38,38 @@ jobs:
         cmake --build build
         sudo cmake --install build
 
-    # =====================
-    # Build project + generate compile_commands.json
-    # =====================
-    - name: Configure CMake
+    # ======================
+    # Configure CMake
+    # ======================
+    - name: Configure project
       run: |
         cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-    # =====================
+    # ======================
+    # FIX compile_commands.json (IMPORTANT)
+    # ======================
+    - name: Fix compile_commands paths
+      run: |
+        cp build/compile_commands.json .
+        sed -i "s|$PWD|.|g" compile_commands.json
+
+    # ======================
     # Build project
-    # =====================
+    # ======================
     - name: Build project
       run: cmake --build build
 
-    # =====================
+    # ======================
     # Run tests
-    # =====================
+    # ======================
     - name: Run tests
       run: |
         cd build
         ctest --output-on-failure || true
 
-    # =====================
-    # SonarCloud Scan (FIXED)
-    # =====================
+    # ======================
+    # SonarCloud Analysis
+    # ======================
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
       env:
@@ -72,6 +80,6 @@ jobs:
           -Dsonar.organization=omarosama16
           -Dsonar.sources=src
           -Dsonar.tests=tests
-          -Dsonar.cfamily.compile-commands=build/compile_commands.json
+          -Dsonar.cfamily.compile-commands=compile_commands.json
           -Dsonar.sourceEncoding=UTF-8
           -Dsonar.exclusions=build/**,**/googletest/**
