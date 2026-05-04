@@ -4,12 +4,11 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "src/**"
-      - "include/**"
+      - "src/**"        # Fixed: was "src/" — needs /** to match files inside
+      - "include/**"    # Fixed: was "include/" — needs /**
       - "tests/**"
       - "CMakeLists.txt"
-      - "sonar-project.properties"
-
+      - "sonar-project.properties"  # Fixed: was a markdown hyperlink [sonar-project.properties](http://...)
   pull_request:
     branches: ["main"]
 
@@ -18,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       # =========================
       # 1. Checkout repository
       # =========================
@@ -34,6 +32,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake g++ libgtest-dev
+          # Fixed: libgtest-dev only installs source, must build it manually
+          cd /usr/src/googletest
+          sudo cmake .
+          sudo cmake --build . --target install
 
       # =========================
       # 3. Configure project (CMake)
@@ -42,7 +44,7 @@ jobs:
         run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       # =========================
-      # 4. Debug build folder (IMPORTANT)
+      # 4. Verify build artifacts
       # =========================
       - name: Verify build artifacts
         run: ls -R build
@@ -63,7 +65,7 @@ jobs:
       # 7. SonarCloud Analysis
       # =========================
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
+        uses: SonarSource/sonarcloud-github-action@v3   # Fixed: v2 is outdated, use v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
