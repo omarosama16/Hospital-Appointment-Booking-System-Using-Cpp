@@ -1,7 +1,7 @@
 #ifndef PATIENT_H
 #define PATIENT_H
 
-#include "User.h"
+#include "user.h"
 #include <string>
 
 class Patient : public User
