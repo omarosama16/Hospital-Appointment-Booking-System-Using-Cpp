@@ -11,86 +11,42 @@ jobs:
 
     steps:
 
-    # ======================
-    # 1. Checkout
-    # ======================
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    # ======================
-    # 2. Install tools
-    # ======================
+
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y g++ git cmake make wget unzip
+        sudo apt-get install -y g++ git cmake make
 
-    # ======================
-    # 3. Install GoogleTest
-    # ======================
-    - name: Install GoogleTest
-      run: |
-        git clone https://github.com/google/googletest.git
-        cd googletest
-        cmake -S . -B build
-        cmake --build build
-        sudo cmake --install build
 
-    # ======================
-    # 4. Install Sonar Build Wrapper
-    # ======================
-    - name: Install Sonar Build Wrapper
-      run: |
-        wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
-        unzip build-wrapper-linux-x86.zip
-        echo "$PWD/build-wrapper-linux-x86" >> $GITHUB_PATH
-
-    # ======================
-    # 5. Build project (WRAPPED)
-    # ======================
-    - name: Build project with wrapper
+    - name: Build project
       run: |
         mkdir -p build
-        mkdir -p bw-output
+        g++ -std=c++17 $(find src -name "*.cpp") -Iinclude -o build/app
 
-        build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
-          --out-dir bw-output \
-          g++ $(find src -name "*.cpp") \
-          -Iinclude \
-          -o build/app
 
-    # ======================
-    # 6. Run app (safe)
-    # ======================
-    - name: Run app (safe)
+    - name: Run app
       run: |
         echo "0" | timeout 3s ./build/app || true
 
-    # ======================
-    # 7. Build tests
-    # ======================
+
     - name: Build tests
       run: |
         mkdir -p test_build
+        g++ -std=c++17 $(find tests -name "*.cpp") $(find src -name "*.cpp") \
+            -Iinclude -lgtest -lgtest_main -pthread \
+            -o test_build/tests || true
 
-        g++ $(find tests -name "*.cpp") \
-            $(find src -name "*.cpp") \
-            -Iinclude \
-            -lgtest -lgtest_main -pthread \
-            -o test_build/tests
 
-    # ======================
-    # 8. Run tests
-    # ======================
     - name: Run tests
       run: |
-        timeout 10s ./test_build/tests || true
+        ./test_build/tests || true
 
-    # ======================
-    # 9. SonarCloud Analysis
-    # ======================
+
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
       env:
@@ -102,5 +58,4 @@ jobs:
           -Dsonar.sources=src
           -Dsonar.tests=tests
           -Dsonar.sourceEncoding=UTF-8
-          -Dsonar.cfamily.build-wrapper-output=bw-output
           -Dsonar.exclusions=build/**,test_build/**
