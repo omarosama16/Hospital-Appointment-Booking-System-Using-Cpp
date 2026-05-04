@@ -6,7 +6,12 @@ project(HospitalAppointmentSystem)
 # =========================
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Force C++17 flags explicitly so compile_commands.json carries -std=c++17
+# This is required for SonarCloud CFamily to recognize the files
+add_compile_options(-std=c++17)
 
 # =========================
 # INCLUDE DIRECTORIES
