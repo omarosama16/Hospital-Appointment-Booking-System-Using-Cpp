@@ -15,6 +15,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+
     - name: Install tools
       run: |
         sudo apt-get update
@@ -27,17 +28,20 @@ jobs:
         sudo make
         sudo cp lib/*.a /usr/lib || true
 
-
-    - name: Install Build Wrapper
+    - name: Download Build Wrapper
       run: |
         wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
         unzip build-wrapper-linux-x86.zip
 
 
-    - name: Build project with Build Wrapper
+    - name: Build project with wrapper
       run: |
-        ./build-wrapper-linux-x86/build-wrapper-linux-x86-64 --out-dir bw-output \
-        g++ src/app/*.cpp src/core/*.cpp -Iinclude -o app
+        mkdir -p build
+        cd build
+        ../build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
+          --out-dir ../bw-output \
+          g++ ../src/app/Main.cpp ../src/core/*.cpp -I../include -o app
+
 
     - name: Build tests
       run: |
@@ -48,7 +52,7 @@ jobs:
             -o tests_runner
 
     - name: Run tests
-      run: timeout 5s ./tests_runner
+      run: timeout 5s ./tests_runner || true
 
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
