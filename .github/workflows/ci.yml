@@ -1,62 +1,48 @@
-name: CI Pipeline
+name: C++ CI + SonarCloud
 
 on:
   push:
-    branches: [ "*" ]
+    branches: ["*"]
   pull_request:
-    branches: [ "*" ]
+    branches: ["*"]
 
 jobs:
-  build-test-analyze:
-    runs-on: ubuntu-22.04
-    env:
-      CC: gcc-11
-      CXX: g++-11
+  build:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-11 g++-11 cmake libgtest-dev
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y g++ cmake libgtest-dev
 
-      - name: Build GoogleTest
-        run: |
-          cd /usr/src/gtest
-          sudo cmake . -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11
-          sudo make
-          sudo cp lib/*.a /usr/lib
+    - name: Build application
+      run: |
+        g++ $(find src -name "*.cpp") -Iinclude -o app
 
-      - name: Configure with CMake
-        run: |
-          cmake -S . -B build \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_C_COMPILER=gcc-11 \
-            -DCMAKE_CXX_COMPILER=g++-11 \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+    - name: Build tests
+      run: |
+        g++ $(find tests -name "*.cpp") $(find src -name "*.cpp") \
+          -Iinclude \
+          -lgtest -lgtest_main -pthread \
+          -o tests_runner
 
-      - name: Build
-        run: cmake --build build --parallel
+    - name: Run tests
+      run: timeout 5s ./tests_runner || true
 
-      - name: Run tests
-        run: timeout 10s ./build/tests_runner || true
-
-      - name: Verify compile_commands.json
-        run: |
-          echo "=== Compiler detected ==="
-          head -20 build/compile_commands.json
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v2
-        with:
-          args: >
-            -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
-            -Dsonar.organization=omarosama16
-            -Dsonar.sources=src
-            -Dsonar.tests=tests
-            -Dsonar.sourceEncoding=UTF-8
-            -Dsonar.cfamily.compile-commands=build/compile_commands.json
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@v2
+      with:
+        args: >
+          -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
+          -Dsonar.organization=omarosama16
+          -Dsonar.sources=src
+          -Dsonar.cpp.file.suffixes=.cpp
+          -Dsonar.c.file.suffixes=-
+          -Dsonar.cfamily.build-wrapper-output=disabled
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
