@@ -47,7 +47,7 @@ if(TEST_SOURCES)
     add_executable(runTests
         ${TEST_SOURCES}
         ${CORE_SOURCES}
-    )
+    ) 
 
     target_link_libraries(runTests
         GTest::gtest
