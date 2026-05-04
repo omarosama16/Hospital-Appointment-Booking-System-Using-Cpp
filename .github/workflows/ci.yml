@@ -11,8 +11,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
     - name: Checkout repository
       uses: actions/checkout@v4
+
 
     - name: Install dependencies
       run: |
@@ -32,21 +34,22 @@ jobs:
         wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
         unzip build-wrapper-linux-x86.zip
 
-    - name: Build project with Build Wrapper
+    - name: Build project with wrapper
       run: |
         mkdir -p build
         cd build
 
-        # compile all cpp files safely (no hardcoded paths)
         ../build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
           --out-dir ../bw-output \
-          bash -c "g++ $(find ../src -name '*.cpp') -I../include -o app"
+          g++ ../src/core/*.cpp ../src/app/*.cpp \
+              -I../include \
+              -o app
 
 
     - name: Build tests
       run: |
-        g++ $(find tests -name '*.cpp') \
-            $(find src -name '*.cpp') \
+        g++ tests/*.cpp \
+            src/core/*.cpp \
             -Iinclude \
             -lgtest -lgtest_main -pthread \
             -o tests_runner
@@ -54,6 +57,7 @@ jobs:
     - name: Run tests
       run: timeout 5s ./tests_runner || true
 
+ 
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
       with:
