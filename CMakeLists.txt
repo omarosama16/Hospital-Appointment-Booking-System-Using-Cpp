@@ -1,21 +1,17 @@
 cmake_minimum_required(VERSION 3.16)
-project(HospitalSystem)
+
+project(HospitalApp CXX)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+include_directories(
+    ${PROJECT_SOURCE_DIR}/src/core
+    ${PROJECT_SOURCE_DIR}/src/app
+)
 
 file(GLOB_RECURSE SOURCES
-    src/core/*.cpp
-    src/app/*.cpp
+    ${PROJECT_SOURCE_DIR}/src/*.cpp
 )
 
 add_executable(app ${SOURCES})
-
-enable_testing()
-
-# GoogleTest (if tests exist)
-file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
-
-if(TEST_SOURCES)
-    add_executable(tests ${TEST_SOURCES} ${SOURCES})
-    target_link_libraries(tests gtest gtest_main pthread)
-endif()
