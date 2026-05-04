@@ -1,22 +1,37 @@
 cmake_minimum_required(VERSION 3.10)
-project(HospitalApp)
+project(HospitalSystem)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# Enable compile database (CRITICAL FOR SONAR)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 include_directories(include)
 
-# Main app
-file(GLOB SOURCES "src/*.cpp")
+# ======================
+# Collect source files
+# ======================
+file(GLOB_RECURSE CORE_SOURCES src/core/*.cpp)
+file(GLOB_RECURSE APP_SOURCES  src/app/*.cpp)
+
+set(SOURCES
+    ${CORE_SOURCES}
+    ${APP_SOURCES}
+)
+
+# ======================
+# Build executable
+# ======================
 add_executable(app ${SOURCES})
 
-# Tests
+# ======================
+# GoogleTest (optional)
+# ======================
 enable_testing()
 
-file(GLOB TEST_SOURCES "tests/*.cpp" "src/*.cpp")
-add_executable(tests ${TEST_SOURCES})
+find_package(GTest REQUIRED)
 
-# GoogleTest (system installed in CI)
-target_link_libraries(tests gtest gtest_main pthread)
+file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
+
+add_executable(tests ${TEST_SOURCES} ${CORE_SOURCES})
+
+target_link_libraries(tests GTest::GTest GTest::Main pthread)
+
+add_test(NAME AllTests COMMAND tests)
