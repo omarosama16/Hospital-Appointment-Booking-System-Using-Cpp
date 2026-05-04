@@ -1,42 +1,23 @@
 cmake_minimum_required(VERSION 3.10)
 project(HospitalAppointmentSystem)
 
-# =========================
-# C++ STANDARD
-# =========================
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Force C++17 flags explicitly so compile_commands.json carries -std=c++17
-# This is required for SonarCloud CFamily to recognize the files
+# Force -std=c++17 explicitly into compile commands for SonarCloud
 add_compile_options(-std=c++17)
 
-# =========================
-# INCLUDE DIRECTORIES
-# =========================
 include_directories(include)
 
-# =========================
-# CORE SOURCES (Business Logic)
-# =========================
-file(GLOB_RECURSE CORE_SOURCES
-    src/core/*.cpp
-)
+file(GLOB_RECURSE CORE_SOURCES src/core/*.cpp)
 
-# =========================
-# MAIN APPLICATION
-# =========================
 add_executable(app
     src/app/Main.cpp
     ${CORE_SOURCES}
 )
 target_include_directories(app PRIVATE include)
 
-# =========================
-# TESTS (GoogleTest)
-# =========================
 enable_testing()
 
 file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
@@ -47,7 +28,7 @@ if(TEST_SOURCES)
     add_executable(runTests
         ${TEST_SOURCES}
         ${CORE_SOURCES}
-    ) 
+    )
 
     target_link_libraries(runTests
         GTest::gtest
