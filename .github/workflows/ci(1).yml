@@ -18,6 +18,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Install build tools
         run: |
           sudo apt-get update
@@ -25,30 +26,27 @@ jobs:
           cd /usr/src/googletest
           sudo cmake .
           sudo cmake --build . --target install
+
       - name: Install Sonar Build Wrapper
         run: |
           curl -sSLo /tmp/build-wrapper.zip https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
           unzip /tmp/build-wrapper.zip -d $HOME
           echo "$HOME/build-wrapper-linux-x86" >> $GITHUB_PATH
+
       - name: Configure CMake
         run: |
           cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_CXX_STANDARD=17 \
-            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
-            -DCMAKE_CXX_COMPILER=g++
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON
+
       - name: Build with Build Wrapper
-        run: build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build --parallel
+        run: build-wrapper-linux-x86-64 --out-dir bw-output make -C build
+
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --verbose
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
-            -Dsonar.organization=omarosama16
-            -Dsonar.sources=src,include
-            -Dsonar.tests=tests
-            -Dsonar.sourceEncoding=UTF-8
-            -Dsonar.cfamily.compile-commands=bw-output/compile_commands.json
