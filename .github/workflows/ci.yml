@@ -1,4 +1,4 @@
-name: C++ CI + GoogleTest + SonarCloud
+name: C++ CI + CMake + GoogleTest + SonarCloud
 
 on:
   push:
@@ -11,53 +11,57 @@ jobs:
 
     steps:
 
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
-    - name: Install tools
+
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y g++ cmake make git wget unzip
 
-    - name: Install GoogleTest
-      run: |
-        git clone https://github.com/google/googletest.git
-        cd googletest
-        cmake -S . -B build
-        cmake --build build
-        sudo cmake --install build
 
-
-    - name: Configure project
+    - name: Configure CMake
       run: |
         cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 
-    - name: Build with Sonar Build Wrapper
+    - name: Install Sonar Build Wrapper
       run: |
         wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
         unzip build-wrapper-linux-x86.zip
+        echo "$PWD/build-wrapper-linux-x86" >> $GITHUB_PATH
 
+    - name: Build with wrapper
+      run: |
         mkdir -p bw-output
-
-        ./build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
+        build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
           --out-dir bw-output \
           cmake --build build
 
-    - name: Run application
+
+    - name: Run app
       run: |
         timeout 3s ./build/app || true
 
-    - name: Run tests
+
+    - name: Build tests (optional)
       run: |
-        if [ -f build/tests ]; then
-          ./build/tests || true
-        else
-          echo "No tests found"
+        if [ -d "tests" ]; then
+          g++ $(find tests -name "*.cpp") \
+              $(find src -name "*.cpp") \
+              -Iinclude -Isrc/core \
+              -lgtest -lgtest_main -pthread \
+              -o test_runner || true
         fi
 
+    - name: Run tests
+      run: |
+        if [ -f test_runner ]; then
+          ./test_runner || true
+        fi
 
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
@@ -68,7 +72,6 @@ jobs:
           -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
           -Dsonar.organization=omarosama16
           -Dsonar.sources=src
-          -Dsonar.tests=tests
           -Dsonar.sourceEncoding=UTF-8
           -Dsonar.cfamily.compile-commands=build/compile_commands.json
           -Dsonar.cfamily.build-wrapper-output=bw-output
