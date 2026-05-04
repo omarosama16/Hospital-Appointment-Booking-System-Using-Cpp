@@ -15,11 +15,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y g++ cmake wget unzip libgtest-dev findutils
+        sudo apt-get install -y g++ cmake wget unzip libgtest-dev
+
 
     - name: Build GoogleTest
       run: |
@@ -34,14 +34,14 @@ jobs:
         wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
         unzip build-wrapper-linux-x86.zip
 
-    - name: Build project with wrapper
+    - name: Build project (wrapped)
       run: |
         mkdir -p build
         cd build
 
         ../build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
           --out-dir ../bw-output \
-          g++ ../src/core/*.cpp ../src/app/*.cpp \
+          g++ ../src/app/*.cpp ../src/core/*.cpp \
               -I../include \
               -o app
 
@@ -57,7 +57,6 @@ jobs:
     - name: Run tests
       run: timeout 5s ./tests_runner || true
 
- 
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
       with:
@@ -66,6 +65,6 @@ jobs:
           -Dsonar.organization=omarosama16
           -Dsonar.sources=src
           -Dsonar.sourceEncoding=UTF-8
-          -Dsonar.cfamily.build-wrapper-output=bw-output
+          -Dsonar.cfamily.compile-commands=bw-output
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
