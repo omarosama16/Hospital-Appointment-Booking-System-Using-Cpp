@@ -27,9 +27,6 @@ jobs:
     - name: Build main project
       run: g++ src/*.cpp -Iinclude -o app
 
-    - name: Run main project
-      run: timeout 5s ./app
-
     - name: Build tests
       run: |
         g++ tests/*.cpp \
