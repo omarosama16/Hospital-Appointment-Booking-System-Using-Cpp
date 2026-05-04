@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "Doctor.h"
 
+// Basic constructor test
 TEST(DoctorTest, ConstructorAndGetters) {
     Doctor d(1, "Omar", "omar@test.com", "1234", "cardiology");
 
