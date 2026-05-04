@@ -1,30 +1,36 @@
-#include <iostream>
-using namespace std;
 #ifndef USER_H
 #define USER_H
+
+#include <string>
+
 class User
 {
 private:
     int id;
-    string name;
-    string email;
-    string password;
-    string role;
+    std::string name;
+    std::string email;
+    std::string password;
+    std::string role;
 
 public:
     User();
-    User(int i, string n, string e, string p, string r);
-    void set_id(int i);
-    void set_email(string e);
-    void set_password(string p);
-    void set_role(string r);
-    void set_name(string n);
-    int get_id();
-    string get_email();
-    string get_password();
-    string get_role();
-    string get_name();
-    virtual ~User() {};
-    virtual bool Authenticate(string Email, string password);
+    User(int i, std::string n, std::string e, std::string p, std::string r);
+
+    void setId(int i);
+    void setEmail(std::string e);
+    void setPassword(std::string p);
+    void setRole(std::string r);
+    void setName(std::string n);
+
+    int getId() const;
+    std::string getEmail() const;
+    std::string getPassword() const;
+    std::string getRole() const;
+    std::string getName() const;
+
+    virtual ~User() {}
+
+    virtual bool authenticate(std::string email, std::string password);
 };
+
 #endif
