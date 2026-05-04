@@ -32,10 +32,8 @@ jobs:
 
       - name: Install Sonar Build Wrapper
         run: |
-          curl -sSLo /tmp/build-wrapper.zip https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
-          unzip /tmp/build-wrapper.zip -d $HOME
-          echo "$HOME/build-wrapper-linux-x86" >> $GITHUB_PATH
-
+          curl -sSLo /tmp/build-wrapper.zip https://sonarcloud.io/static/coo/build-wrapper-linux-x86.zip
+          unzip/tmp/build-wrapper.zip-d $HOME
       - name: Configure CMake
         run: |
           cmake -S . -B build \
