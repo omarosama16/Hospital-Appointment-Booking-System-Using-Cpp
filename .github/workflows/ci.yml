@@ -6,26 +6,26 @@ on:
   pull_request:
 
 jobs:
-  build-test-sonar:
+  build-test-analyze:
     runs-on: ubuntu-latest
 
     steps:
 
     # ======================
-    # Checkout repo
+    # Checkout
     # ======================
-    - name: Checkout repository
+    - name: Checkout repo
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
     # ======================
-    # Install dependencies
+    # Install tools
     # ======================
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y g++ cmake make git
+        sudo apt-get install -y g++ make wget unzip git
 
     # ======================
     # Install GoogleTest
@@ -39,36 +39,57 @@ jobs:
         sudo cmake --install build
 
     # ======================
-    # Configure CMake
+    # Sonar Build Wrapper
     # ======================
-    - name: Configure project
+    - name: Install Build Wrapper
       run: |
-        cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
+        unzip build-wrapper-linux-x86.zip
+        echo "$PWD/build-wrapper-linux-x86" >> $GITHUB_PATH
 
     # ======================
-    # FIX compile_commands.json (IMPORTANT)
-    # ======================
-    - name: Fix compile_commands paths
-      run: |
-        cp build/compile_commands.json .
-        sed -i "s|$PWD|.|g" compile_commands.json
-
-    # ======================
-    # Build project
+    # Build project (WRAPPED)
     # ======================
     - name: Build project
-      run: cmake --build build
+      run: |
+        mkdir -p build
+        mkdir -p bw-output
+
+        build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
+          --out-dir bw-output \
+          g++ -std=c++17 \
+          $(find src -name "*.cpp") \
+          -Iinclude \
+          -o build/app
+
+    # ======================
+    # Run app (optional)
+    # ======================
+    - name: Run app
+      run: |
+        echo "0" | timeout 2s ./build/app || true
+
+    # ======================
+    # Build tests
+    # ======================
+    - name: Build tests
+      run: |
+        g++ -std=c++17 \
+          $(find src -name "*.cpp") \
+          $(find tests -name "*.cpp") \
+          -Iinclude \
+          -lgtest -lgtest_main -pthread \
+          -o build/tests
 
     # ======================
     # Run tests
     # ======================
     - name: Run tests
       run: |
-        cd build
-        ctest --output-on-failure || true
+        ./build/tests || true
 
     # ======================
-    # SonarCloud Analysis
+    # SonarCloud
     # ======================
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
@@ -80,6 +101,6 @@ jobs:
           -Dsonar.organization=omarosama16
           -Dsonar.sources=src
           -Dsonar.tests=tests
-          -Dsonar.cfamily.compile-commands=compile_commands.json
           -Dsonar.sourceEncoding=UTF-8
-          -Dsonar.exclusions=build/**,**/googletest/**
+          -Dsonar.cfamily.build-wrapper-output=bw-output
+          -Dsonar.exclusions=build/**,googletest/**
