@@ -17,7 +17,9 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y g++ cmake wget unzip libgtest-dev
+          sudo apt-get install -y g++-12 cmake wget unzip libgtest-dev
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
 
       - name: Build GoogleTest
         run: |
@@ -35,13 +37,13 @@ jobs:
         run: |
           build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
             --out-dir bw-output \
-            g++ src/app/*.cpp src/core/*.cpp \
+            g++-12 src/app/*.cpp src/core/*.cpp \
                 -Iinclude \
                 -o app
 
       - name: Build tests
         run: |
-          g++ tests/*.cpp \
+          g++-12 tests/*.cpp \
               src/core/*.cpp \
               -Iinclude \
               -lgtest -lgtest_main -pthread \
@@ -49,6 +51,9 @@ jobs:
 
       - name: Run tests
         run: timeout 5s ./tests_runner || true
+
+      - name: Debug compile_commands.json
+        run: cat bw-output/compile_commands.json
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
