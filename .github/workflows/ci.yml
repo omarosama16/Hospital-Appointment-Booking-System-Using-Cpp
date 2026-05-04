@@ -11,60 +11,55 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ cmake wget unzip libgtest-dev
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y g++ cmake wget unzip libgtest-dev
+      - name: Build GoogleTest
+        run: |
+          cd /usr/src/gtest
+          sudo cmake .
+          sudo make
+          sudo cp lib/*.a /usr/lib || true
 
+      - name: Download Build Wrapper
+        run: |
+          wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
+          unzip build-wrapper-linux-x86.zip
 
-    - name: Build GoogleTest
-      run: |
-        cd /usr/src/gtest
-        sudo cmake .
-        sudo make
-        sudo cp lib/*.a /usr/lib || true
+      - name: Build project (wrapped)
+        run: |
+          mkdir -p build
+          cd build
+          ../build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
+            --out-dir ../bw-output \
+            g++ ../src/app/*.cpp ../src/core/*.cpp \
+                -I../include \
+                -o app
 
+      - name: Build tests
+        run: |
+          g++ tests/*.cpp \
+              src/core/*.cpp \
+              -Iinclude \
+              -lgtest -lgtest_main -pthread \
+              -o tests_runner
 
-    - name: Download Build Wrapper
-      run: |
-        wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
-        unzip build-wrapper-linux-x86.zip
+      - name: Run tests
+        run: timeout 5s ./tests_runner || true
 
-    - name: Build project (wrapped)
-      run: |
-        mkdir -p build
-        cd build
-
-        ../build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
-          --out-dir ../bw-output \
-          g++ ../src/app/*.cpp ../src/core/*.cpp \
-              -I../include \
-              -o app
-
-
-    - name: Build tests
-      run: |
-        g++ tests/*.cpp \
-            src/core/*.cpp \
-            -Iinclude \
-            -lgtest -lgtest_main -pthread \
-            -o tests_runner
-
-    - name: Run tests
-      run: timeout 5s ./tests_runner || true
-
-    - name: SonarCloud Scan
-      uses: SonarSource/sonarcloud-github-action@v2
-      with:
-        args: >
-          -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
-          -Dsonar.organization=omarosama16
-          -Dsonar.sources=src
-          -Dsonar.sourceEncoding=UTF-8
-          -Dsonar.cfamily.compile-commands=bw-output
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          args: >
+            -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
+            -Dsonar.organization=omarosama16
+            -Dsonar.sources=src
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.cfamily.compile-commands=bw-output/compile_commands.json
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
