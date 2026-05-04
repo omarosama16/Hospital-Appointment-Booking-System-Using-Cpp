@@ -32,28 +32,31 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake g++ libgtest-dev
-          # libgtest-dev installs source only — must build it
           cd /usr/src/googletest
           sudo cmake .
           sudo cmake --build . --target install
 
       # =========================
       # 3. Configure project (CMake)
-      # Fixed: explicitly pass -DCMAKE_CXX_STANDARD=17 so compile_commands.json
-      # carries -std=c++17, which SonarCloud CFamily requires to analyze files
+      # Use g++ explicitly and force C++17 via CXX env var
       # =========================
       - name: Configure CMake
+        env:
+          CXX: g++
+          CC: gcc
         run: |
           cmake -S . -B build \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DCMAKE_CXX_STANDARD=17 \
+            -DCMAKE_CXX_STANDARD_REQUIRED=ON \
             -DCMAKE_CXX_COMPILER=g++
 
       # =========================
-      # 4. Verify build artifacts
+      # 4. Debug: Print compile_commands.json
+      # This lets us verify -std=c++17 is actually in the file
       # =========================
-      - name: Verify build artifacts
-        run: ls -R build
+      - name: Print compile_commands.json
+        run: cat build/compile_commands.json
 
       # =========================
       # 5. Build project
@@ -82,3 +85,4 @@ jobs:
             -Dsonar.tests=tests
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.cfamily.compile-commands=build/compile_commands.json
+            -Dsonar.cfamily.analysisCache.mode=server
