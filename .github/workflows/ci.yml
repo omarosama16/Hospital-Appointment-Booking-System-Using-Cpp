@@ -37,32 +37,35 @@ jobs:
           sudo cmake --build . --target install
 
       # =========================
-      # 3. Configure project (CMake)
-      # Use g++ explicitly and force C++17 via CXX env var
+      # 3. Install Sonar Build Wrapper
+      # Required by CFamily plugin 6.x to properly analyze C++ files
+      # =========================
+      - name: Install Sonar Build Wrapper
+        run: |
+          curl -sSLo /tmp/build-wrapper-linux-x86.zip \
+            https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
+          unzip /tmp/build-wrapper-linux-x86.zip -d /tmp/
+          sudo mv /tmp/build-wrapper-linux-x86/build-wrapper-linux-x86-64 /usr/local/bin/build-wrapper
+          sudo chmod +x /usr/local/bin/build-wrapper
+
+      # =========================
+      # 4. Configure CMake
       # =========================
       - name: Configure CMake
-        env:
-          CXX: g++
-          CC: gcc
         run: |
           cmake -S . -B build \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
             -DCMAKE_CXX_STANDARD=17 \
             -DCMAKE_CXX_STANDARD_REQUIRED=ON \
             -DCMAKE_CXX_COMPILER=g++
 
       # =========================
-      # 4. Debug: Print compile_commands.json
-      # This lets us verify -std=c++17 is actually in the file
+      # 5. Build with Sonar Build Wrapper
+      # Wraps the build so Sonar can intercept compiler calls
       # =========================
-      - name: Print compile_commands.json
-        run: cat build/compile_commands.json
-
-      # =========================
-      # 5. Build project
-      # =========================
-      - name: Build project
-        run: cmake --build build --parallel
+      - name: Build with Build Wrapper
+        run: |
+          build-wrapper --out-dir bw-output \
+            cmake --build build --parallel
 
       # =========================
       # 6. Run tests
@@ -72,6 +75,7 @@ jobs:
 
       # =========================
       # 7. SonarCloud Analysis
+      # Now uses bw-output instead of compile_commands.json
       # =========================
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
@@ -84,5 +88,4 @@ jobs:
             -Dsonar.sources=src,include
             -Dsonar.tests=tests
             -Dsonar.sourceEncoding=UTF-8
-            -Dsonar.cfamily.compile-commands=build/compile_commands.json
-            -Dsonar.cfamily.analysisCache.mode=server
+            -Dsonar.cfamily.build-wrapper-output=bw-output
