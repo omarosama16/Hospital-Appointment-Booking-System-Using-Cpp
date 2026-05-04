@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout repository
@@ -41,6 +41,9 @@ jobs:
                 -Iinclude \
                 -o app
 
+      - name: Debug compile_commands.json
+        run: cat bw-output/compile_commands.json
+
       - name: Build tests
         run: |
           g++-12 tests/*.cpp \
@@ -51,9 +54,6 @@ jobs:
 
       - name: Run tests
         run: timeout 5s ./tests_runner || true
-
-      - name: Debug compile_commands.json
-        run: cat bw-output/compile_commands.json
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
