@@ -38,15 +38,14 @@ jobs:
 
       # =========================
       # 3. Install Sonar Build Wrapper
-      # Required by CFamily plugin 6.x to properly analyze C++ files
+      # Keep the entire extracted folder — the binary needs its .so files
       # =========================
       - name: Install Sonar Build Wrapper
         run: |
           curl -sSLo /tmp/build-wrapper-linux-x86.zip \
             https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
-          unzip /tmp/build-wrapper-linux-x86.zip -d /tmp/
-          sudo mv /tmp/build-wrapper-linux-x86/build-wrapper-linux-x86-64 /usr/local/bin/build-wrapper
-          sudo chmod +x /usr/local/bin/build-wrapper
+          unzip /tmp/build-wrapper-linux-x86.zip -d $HOME
+          echo "$HOME/build-wrapper-linux-x86" >> $GITHUB_PATH
 
       # =========================
       # 4. Configure CMake
@@ -60,11 +59,10 @@ jobs:
 
       # =========================
       # 5. Build with Sonar Build Wrapper
-      # Wraps the build so Sonar can intercept compiler calls
       # =========================
       - name: Build with Build Wrapper
         run: |
-          build-wrapper --out-dir bw-output \
+          build-wrapper-linux-x86-64 --out-dir bw-output \
             cmake --build build --parallel
 
       # =========================
@@ -75,7 +73,6 @@ jobs:
 
       # =========================
       # 7. SonarCloud Analysis
-      # Now uses bw-output instead of compile_commands.json
       # =========================
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
