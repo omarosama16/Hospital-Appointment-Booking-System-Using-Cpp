@@ -9,6 +9,9 @@ on:
 jobs:
   build-test-analyze:
     runs-on: ubuntu-22.04
+    env:
+      CC: gcc-11
+      CXX: g++-11
 
     steps:
       - name: Checkout repository
@@ -17,12 +20,12 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake g++ libgtest-dev
+          sudo apt-get install -y gcc-11 g++-11 cmake libgtest-dev
 
       - name: Build GoogleTest
         run: |
           cd /usr/src/gtest
-          sudo cmake .
+          sudo cmake . -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11
           sudo make
           sudo cp lib/*.a /usr/lib
 
@@ -30,15 +33,20 @@ jobs:
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=gcc-11 \
+            -DCMAKE_CXX_COMPILER=g++-11 \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Build
-        run: cmake --build build
+        run: cmake --build build --parallel
 
       - name: Run tests
+        run: timeout 10s ./build/tests_runner || true
+
+      - name: Verify compile_commands.json
         run: |
-          cd build
-          timeout 10s ./tests_runner || true
+          echo "=== Compiler detected ==="
+          head -20 build/compile_commands.json
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
