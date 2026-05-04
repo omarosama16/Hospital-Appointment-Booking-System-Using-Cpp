@@ -6,6 +6,8 @@
 #include "system.h"
 #include "user.h"
 #include "Appointment.h"
+#include "core/Doctor.h"
+#include "core/Patient.h"
 
 using namespace std;
 
