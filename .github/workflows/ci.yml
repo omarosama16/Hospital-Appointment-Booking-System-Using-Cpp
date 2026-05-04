@@ -14,27 +14,47 @@ on:
     branches: ["main"]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      # =========================
+      # 1. Checkout code
+      # =========================
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install tools
-        run: sudo apt-get update && sudo apt-get install -y cmake g++
+      # =========================
+      # 2. Install dependencies
+      # =========================
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ libgtest-dev
 
-      - name: Configure
+      # =========================
+      # 3. Configure project
+      # =========================
+      - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
+      # =========================
+      # 4. Build project
+      # =========================
       - name: Build
-        run: cmake --build build
+        run: cmake --build build --parallel
 
+      # =========================
+      # 5. Run tests
+      # =========================
       - name: Run tests
-        run: ctest --test-dir build
+        run: ctest --test-dir build --output-on-failure
 
+      # =========================
+      # 6. SonarCloud analysis
+      # =========================
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
@@ -47,4 +67,3 @@ jobs:
             -Dsonar.tests=tests
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.cfamily.compile-commands=build/compile_commands.json
-            -Dsonar.exclusions=build/**,**/googletest/**
