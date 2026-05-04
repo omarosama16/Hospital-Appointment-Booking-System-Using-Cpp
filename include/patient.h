@@ -1,20 +1,17 @@
 #ifndef PATIENT_H
 #define PATIENT_H
-
 #include "user.h"
 #include <string>
+using namespace std;
 
-class Patient : public User
+class patient : public User
 {
 private:
-    std::string phone;
-
+    string phone;
 public:
-    Patient(int id, std::string name, std::string email, std::string password, std::string phone);
-    void setPhone(std::string p);
-    std::string getPhone() const;
-
-    ~Patient() {}
+    patient(int id, string name, string email, string password, string phone);
+    void set_phone(string p);
+    string get_phone() const;
+    ~patient() {}
 };
-
 #endif
