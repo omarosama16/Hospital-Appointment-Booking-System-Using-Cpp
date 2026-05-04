@@ -33,12 +33,10 @@ jobs:
 
       - name: Build project (wrapped)
         run: |
-          mkdir -p build
-          cd build
-          ../build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
-            --out-dir ../bw-output \
-            g++ ../src/app/*.cpp ../src/core/*.cpp \
-                -I../include \
+          build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
+            --out-dir bw-output \
+            g++ src/app/*.cpp src/core/*.cpp \
+                -Iinclude \
                 -o app
 
       - name: Build tests
