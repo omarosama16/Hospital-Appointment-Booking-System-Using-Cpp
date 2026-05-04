@@ -1,7 +1,7 @@
-#include <iostream>
-using namespace std;
 #ifndef APPOINTMENT_H
 #define APPOINTMENT_H
+#include <string>
+using namespace std;
 
 class Appointment
 {
@@ -14,7 +14,6 @@ private:
     string date;
     string time;
     string status;
-
 public:
     Appointment();
     Appointment(int a, int p, int d, string pa, string doc, string da, string t, string s);
