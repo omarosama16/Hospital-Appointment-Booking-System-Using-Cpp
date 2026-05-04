@@ -11,14 +11,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install tools
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y g++ cmake wget unzip libgtest-dev
+        sudo apt-get install -y g++ cmake wget unzip libgtest-dev findutils
 
     - name: Build GoogleTest
       run: |
@@ -27,28 +26,27 @@ jobs:
         sudo make
         sudo cp lib/*.a /usr/lib || true
 
+
     - name: Download Build Wrapper
       run: |
         wget https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
         unzip build-wrapper-linux-x86.zip
 
-    - name: Build project (wrapped)
+    - name: Build project with Build Wrapper
       run: |
         mkdir -p build
         cd build
 
+        # compile all cpp files safely (no hardcoded paths)
         ../build-wrapper-linux-x86/build-wrapper-linux-x86-64 \
           --out-dir ../bw-output \
-          g++ ../src/app/Main.cpp \
-              ../src/core/Doctor.cpp \
-              ../src/core/Patient.cpp \
-              -I../include \
-              -o app
+          bash -c "g++ $(find ../src -name '*.cpp') -I../include -o app"
+
 
     - name: Build tests
       run: |
-        g++ tests/*.cpp \
-            src/core/*.cpp \
+        g++ $(find tests -name '*.cpp') \
+            $(find src -name '*.cpp') \
             -Iinclude \
             -lgtest -lgtest_main -pthread \
             -o tests_runner
