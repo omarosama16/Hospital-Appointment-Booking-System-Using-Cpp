@@ -7,32 +7,45 @@ on:
     branches: ["*"]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
 
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+
+
     - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y g++ cmake libgtest-dev
 
+    - name: Build GoogleTest
+      run: |
+        cd /usr/src/gtest
+        sudo cmake .
+        sudo make
+        sudo cp lib/*.a /usr/lib || true
+
+
     - name: Build application
       run: |
         g++ $(find src -name "*.cpp") -Iinclude -o app
 
+
     - name: Build tests
       run: |
-        g++ $(find tests -name "*.cpp") $(find src -name "*.cpp") \
-          -Iinclude \
-          -lgtest -lgtest_main -pthread \
-          -o tests_runner
+        g++ tests/*.cpp \
+            src/core/*.cpp \
+            -Iinclude \
+            -lgtest -lgtest_main -pthread \
+            -o tests_runner
+
 
     - name: Run tests
       run: timeout 5s ./tests_runner || true
+
 
     - name: SonarCloud Scan
       uses: SonarSource/sonarcloud-github-action@v2
@@ -41,8 +54,7 @@ jobs:
           -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
           -Dsonar.organization=omarosama16
           -Dsonar.sources=src
-          -Dsonar.cpp.file.suffixes=.cpp
-          -Dsonar.c.file.suffixes=-
+          -Dsonar.sourceEncoding=UTF-8
           -Dsonar.cfamily.build-wrapper-output=disabled
       env:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
