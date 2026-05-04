@@ -30,7 +30,7 @@ jobs:
     - name: Build tests
       run: |
         g++ tests/*.cpp \
-            src/Doctor.cpp src/Patient.cpp \
+            src/*.cpp \
             -Iinclude \
             -lgtest -lgtest_main -pthread \
             -o tests_runner
