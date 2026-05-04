@@ -18,34 +18,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # 2. Install build tools
       - name: Install build tools
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake g++
 
+      # 3. Install + Build GoogleTest (FIXED)
       - name: Install GoogleTest
-        run: sudo apt-get install -y libgtest-dev
+        run: |
+          sudo apt-get install -y libgtest-dev cmake
+          cd /usr/src/gtest
+          sudo cmake .
+          sudo make
+          sudo cp lib/*.a /usr/lib
 
-      - name: Install GoogleTest
-        run: sudo apt-get install -y libgtest-dev
-
+      # 4. Configure project
       - name: Configure CMake
         run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
+      # 5. (Optional debug) show build files
       - name: Verify compile database
         run: ls -R build
 
-      - name: Build project
+      # 6. Build project
+      - name: Build
         run: cmake --build build --parallel
 
+      # 7. Run tests
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --verbose
 
+      # 8. SonarCloud scan
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v2
         env:
