@@ -16,6 +16,7 @@ jobs:
         with:
           fetch-depth: 0
  
+      # ─── STEP 1 · BUILD ─────────────────────────────────────────
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -31,11 +32,15 @@ jobs:
       - name: Build project
         run: cmake --build build --parallel
  
+      # ─── STEP 2 · TEST ──────────────────────────────────────────
       - name: Run unit tests
         run: |
           cd build
-          ctest --output-on-failure --timeout 10
-        continue-on-error: true
+          if ctest --show-only 2>&1 | grep -q "Test #"; then
+            ctest --output-on-failure --timeout 10
+          else
+            echo "No tests found, skipping."
+          fi
  
       - name: Generate coverage report
         run: |
@@ -44,6 +49,7 @@ jobs:
             --output coverage.xml \
             --exclude tests/
  
+      # ─── STEP 3 · CODE QUALITY (SonarQube) ──────────────────────
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
