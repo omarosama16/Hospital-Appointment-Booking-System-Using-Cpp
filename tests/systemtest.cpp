@@ -1,8 +1,5 @@
 #include <gtest/gtest.h>
 #include "system.h"
-#include "Doctor.h"
-#include "patient.h"
-#include "admin.h"
 
 static int getDoctorId(HospitalSystem &system)
 {
@@ -13,20 +10,11 @@ static int getDoctorId(HospitalSystem &system)
     return -1;
 }
 
-static int getPatientId(HospitalSystem &system)
-{
-    auto users = system.adminViewAllUsers();
-    for (auto u : users)
-        if (u->get_role() == "patient")
-            return u->get_id();
-    return -1;
-}
-
 TEST(HospitalSystemTest, Login_AllBranches)
 {
     HospitalSystem system;
 
-    EXPECT_FALSE(system.login("fake@mail.com", "x"));
+    EXPECT_FALSE(system.login("wrong@mail.com", "wrong"));
     EXPECT_TRUE(system.login("admin@mail.com", "admin123"));
 }
 
@@ -47,13 +35,14 @@ TEST(HospitalSystemTest, Booking_FullFlow)
 {
     HospitalSystem system;
 
+    // create users
     system.registerNewDoctor("Dr A", "doc@mail.com", "Cardio");
     system.registerNewPatient("Ali", "ali@mail.com", "0100");
 
     int doctorId = getDoctorId(system);
     ASSERT_NE(doctorId, -1);
 
-    // patient login (MUST use default password)
+    // IMPORTANT: login MUST use default password
     ASSERT_TRUE(system.login("ali@mail.com", "default"));
 
     bool booked = system.bookAppointment(doctorId, "2026", "10AM");
@@ -72,8 +61,8 @@ TEST(HospitalSystemTest, CancelFlow_AllBranches)
 
     int doctorId = getDoctorId(system);
 
-    system.login("ali@mail.com", "default");
-    system.bookAppointment(doctorId, "2026", "10AM");
+    ASSERT_TRUE(system.login("ali@mail.com", "default"));
+    ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
     auto apps = system.viewMyAppointments();
     ASSERT_EQ(apps.size(), 1);
@@ -92,8 +81,8 @@ TEST(HospitalSystemTest, ViewMyAppointments_Branches)
 
     int doctorId = getDoctorId(system);
 
-    system.login("ali@mail.com", "default");
-    system.bookAppointment(doctorId, "2026", "10AM");
+    ASSERT_TRUE(system.login("ali@mail.com", "default"));
+    ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
     auto apps = system.viewMyAppointments();
     EXPECT_EQ(apps.size(), 1);
@@ -108,10 +97,10 @@ TEST(HospitalSystemTest, DoctorSchedule_And_Complete)
 
     int doctorId = getDoctorId(system);
 
-    system.login("ali@mail.com", "default");
-    system.bookAppointment(doctorId, "2026", "10AM");
+    ASSERT_TRUE(system.login("ali@mail.com", "default"));
+    ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
-    system.login("doc@mail.com", "default");
+    ASSERT_TRUE(system.login("doc@mail.com", "default"));
 
     auto schedule = system.viewDoctorSchedule();
     EXPECT_EQ(schedule.size(), 1);
