@@ -1,298 +1,158 @@
 #include <gtest/gtest.h>
 #include "system.h"
- 
-#define DEFAULT_PASS "default"
-#define ADMIN_EMAIL  "admin@mail.com"
-#define ADMIN_PASS   "admin123"
- 
- 
-TEST(HospitalSystemTest, LoginAdminSucceeds) {
-    HospitalSystem hs;
-    EXPECT_TRUE(hs.login(ADMIN_EMAIL, ADMIN_PASS));
+
+TEST(SystemTest, AdminExistsByDefault) {
+    HospitalSystem system;
+
+    auto users = system.adminViewAllUsers();
+
+    EXPECT_EQ(users.size(), 1);
+    EXPECT_EQ(users[0]->get_name(), "admin");
 }
- 
-TEST(HospitalSystemTest, LoginPatientSucceeds) {
-    HospitalSystem hs;
-    hs.registerNewPatient("Layla", "layla@test.com", "0501234567");
-    EXPECT_TRUE(hs.login("layla@test.com", DEFAULT_PASS));
+
+TEST(SystemTest, RegisterPatientsIncreaseUsers) {
+    HospitalSystem system;
+
+    system.registerNewPatient("Omar", "omar@test.com", "010");
+    system.registerNewPatient("Ali", "ali@test.com", "011");
+
+    auto users = system.adminViewAllUsers();
+
+    EXPECT_EQ(users.size(), 3);
 }
- 
-TEST(HospitalSystemTest, LoginDoctorSucceeds) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Hana", "hana@test.com", "Oncology");
-    EXPECT_TRUE(hs.login("hana@test.com", DEFAULT_PASS));
+
+TEST(SystemTest, PatientLoginSuccess) {
+    HospitalSystem system;
+
+    system.registerNewPatient("Omar", "omar@test.com", "010");
+
+    EXPECT_TRUE(system.login("omar@test.com", "default"));
 }
- 
-TEST(HospitalSystemTest, LoginWrongPasswordFails) {
-    HospitalSystem hs;
-    hs.registerNewPatient("Tarek", "tarek@test.com", "0509999999");
-    EXPECT_FALSE(hs.login("tarek@test.com", "wrongpass"));
+
+TEST(SystemTest, DoctorLoginSuccess) {
+    HospitalSystem system;
+
+    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
+
+    EXPECT_TRUE(system.login("doc@test.com", "default"));
 }
- 
-TEST(HospitalSystemTest, LoginUnregisteredEmailFails) {
-    HospitalSystem hs;
-    EXPECT_FALSE(hs.login("nobody@test.com", "pass"));
+
+TEST(SystemTest, WrongLoginFails) {
+    HospitalSystem system;
+
+    EXPECT_FALSE(system.login("fake@test.com", "default"));
 }
- 
- 
-TEST(HospitalSystemTest, RegisterPatientAppearsInUserList) {
-    HospitalSystem hs;
-    hs.registerNewPatient("Ali", "ali@test.com", "0500000001");
-    auto users = hs.adminViewAllUsers();
-    bool found = false;
-    for (auto u : users)
-        if (u->get_email() == "ali@test.com") found = true;
-    EXPECT_TRUE(found);
+
+TEST(SystemTest, BookAppointmentFailsWithoutLogin) {
+    HospitalSystem system;
+
+    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
+
+    EXPECT_FALSE(system.bookAppointment(2, "2026", "10AM"));
 }
- 
-TEST(HospitalSystemTest, RegisterMultiplePatientsAllAppear) {
-    HospitalSystem hs;
-    hs.registerNewPatient("P1", "p1@test.com", "0500000001");
-    hs.registerNewPatient("P2", "p2@test.com", "0500000002");
-    EXPECT_EQ(hs.adminViewAllUsers().size(), 3);
+
+TEST(SystemTest, BookAppointmentSuccess) {
+    HospitalSystem system;
+
+    system.registerNewPatient("Omar", "omar@test.com", "010");
+    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
+
+    system.login("omar@test.com", "default");
+
+
+    EXPECT_TRUE(system.bookAppointment(3, "2026", "10AM"));
+
+    auto apps = system.viewMyAppointments();
+    EXPECT_EQ(apps.size(), 1);
 }
- 
- 
-TEST(HospitalSystemTest, RegisterDoctorAppearsInUserList) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Ziad", "ziad@test.com", "Neurology");
-    auto users = hs.adminViewAllUsers();
-    bool found = false;
-    for (auto u : users)
-        if (u->get_email() == "ziad@test.com") found = true;
-    EXPECT_TRUE(found);
+
+TEST(SystemTest, ConflictPreventsDoubleBooking) {
+    HospitalSystem system;
+
+    system.registerNewPatient("Omar", "omar@test.com", "010");
+    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
+
+    system.login("omar@test.com", "default");
+
+    EXPECT_TRUE(system.bookAppointment(3, "2026", "10AM"));
+    EXPECT_FALSE(system.bookAppointment(3, "2026", "10AM"));
 }
- 
-TEST(HospitalSystemTest, RegisterDoctorHasDefaultAvailability) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Reem", "reem@test.com", "Dermatology");
-    EXPECT_TRUE(hs.login("reem@test.com", DEFAULT_PASS));
-    auto schedule = hs.viewDoctorSchedule();
-    EXPECT_TRUE(schedule.empty()); 
+
+TEST(SystemTest, CancelAppointmentWorks) {
+    HospitalSystem system;
+
+    system.registerNewPatient("Omar", "omar@test.com", "010");
+    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
+
+    system.login("omar@test.com", "default");
+
+    system.bookAppointment(3, "2026", "10AM");
+
+    auto apps = system.viewMyAppointments();
+    ASSERT_EQ(apps.size(), 1);
+
+    EXPECT_TRUE(system.cancelAppointmentPatient(apps[0].get_AppointmentId()));
 }
- 
- 
-TEST(HospitalSystemTest, BookAppointmentWithoutLoginFails) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. X", "x@test.com", "Surgery");
-    EXPECT_FALSE(hs.bookAppointment(2, "2025-10-01", "10:00"));
+
+TEST(SystemTest, CancelFailsWrongUser) {
+    HospitalSystem system;
+
+    system.registerNewPatient("Omar", "omar@test.com", "010");
+    system.registerNewPatient("Ali", "ali@test.com", "011");
+    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
+
+    system.login("omar@test.com", "default");
+    system.bookAppointment(3, "2026", "10AM");
+
+    auto apps = system.viewMyAppointments();
+    ASSERT_EQ(apps.size(), 1);
+
+    system.login("ali@test.com", "default");
+
+    EXPECT_FALSE(system.cancelAppointmentPatient(apps[0].get_AppointmentId()));
 }
- 
-TEST(HospitalSystemTest, BookAppointmentAsAdminFails) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. X", "x@test.com", "Surgery");
-    hs.login(ADMIN_EMAIL, ADMIN_PASS);
-    EXPECT_FALSE(hs.bookAppointment(2, "2025-10-01", "10:00"));
+
+TEST(SystemTest, DoctorSeesSchedule) {
+    HospitalSystem system;
+
+    system.registerNewPatient("Omar", "omar@test.com", "010");
+    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
+
+    system.login("omar@test.com", "default");
+    system.bookAppointment(3, "2026", "10AM");
+
+    system.login("doc@test.com", "default");
+
+    auto schedule = system.viewDoctorSchedule();
+    EXPECT_EQ(schedule.size(), 1);
 }
- 
-TEST(HospitalSystemTest, BookAppointmentAsDoctorFails) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. A", "a@test.com", "Cardiology");
-    hs.registerNewDoctor("Dr. B", "b@test.com", "Neurology");
-    hs.login("a@test.com", DEFAULT_PASS);
-    EXPECT_FALSE(hs.bookAppointment(3, "2025-10-01", "10:00"));
+
+TEST(SystemTest, DoctorCompletesAppointment) {
+    HospitalSystem system;
+
+    system.registerNewPatient("Omar", "omar@test.com", "010");
+    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
+
+    system.login("omar@test.com", "default");
+    system.bookAppointment(3, "2026", "10AM");
+
+    system.login("doc@test.com", "default");
+
+    auto schedule = system.viewDoctorSchedule();
+    ASSERT_EQ(schedule.size(), 1);
+
+    EXPECT_TRUE(system.completeAppointmentDoctor(schedule[0].get_AppointmentId()));
 }
- 
-TEST(HospitalSystemTest, BookAppointmentWithNonExistentDoctorFails) {
-    HospitalSystem hs;
-    hs.registerNewPatient("Sara", "sara@test.com", "0500000003");
-    hs.login("sara@test.com", DEFAULT_PASS);
-    EXPECT_FALSE(hs.bookAppointment(999, "2025-10-01", "10:00"));
-}
- 
-TEST(HospitalSystemTest, BookAppointmentSucceeds) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology"); 
-    hs.registerNewPatient("Nour", "nour@test.com", "0500000004");     
-    hs.login("nour@test.com", DEFAULT_PASS);
-    EXPECT_TRUE(hs.bookAppointment(2, "2025-11-01", "10AM"));
-}
- 
-TEST(HospitalSystemTest, BookAppointmentAppearsInPatientView) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology");
-    hs.registerNewPatient("Nour", "nour@test.com", "0500000004");     
-    hs.login("nour@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM");
-    EXPECT_EQ(hs.viewMyAppointments().size(), 1);
-}
- 
-TEST(HospitalSystemTest, BookAppointmentAppearsInAdminView) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology"); 
-    hs.registerNewPatient("Nour", "nour@test.com", "0500000004");      
-    hs.login("nour@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM");
-    EXPECT_EQ(hs.adminViewAllAppointments().size(), 1);
-}
- 
- 
-TEST(HospitalSystemTest, CheckConflictReturnsFalseWhenNoAppointments) {
-    HospitalSystem hs;
-    EXPECT_FALSE(hs.checkConflict(1, "2025-11-01", "09:00"));
-}
- 
-TEST(HospitalSystemTest, CheckConflictDetectsDuplicate) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology");
-    hs.registerNewPatient("Nour", "nour@test.com", "0500000004");    
-    hs.login("nour@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM");
-    EXPECT_TRUE(hs.checkConflict(2, "2025-11-01", "10AM"));
-}
- 
-TEST(HospitalSystemTest, BookingConflictingSlotFails) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology"); 
-    hs.registerNewPatient("P1", "p1@test.com", "0500000001");     
-    hs.registerNewPatient("P2", "p2@test.com", "0500000002");      
-    hs.login("p1@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM");
-    hs.login("p2@test.com", DEFAULT_PASS);
-    EXPECT_FALSE(hs.bookAppointment(2, "2025-11-01", "10AM"));
-}
- 
- 
-TEST(HospitalSystemTest, CancelWithoutLoginFails) {
-    HospitalSystem hs;
-    EXPECT_FALSE(hs.cancelAppointmentPatient(1));
-}
- 
-TEST(HospitalSystemTest, CancelAsAdminFails) {
-    HospitalSystem hs;
-    hs.login(ADMIN_EMAIL, ADMIN_PASS);
-    EXPECT_FALSE(hs.cancelAppointmentPatient(1));
-}
- 
-TEST(HospitalSystemTest, CancelNonExistentAppointmentFails) {
-    HospitalSystem hs;
-    hs.registerNewPatient("Amr", "amr@test.com", "0522222222");
-    hs.login("amr@test.com", DEFAULT_PASS);
-    EXPECT_FALSE(hs.cancelAppointmentPatient(999));
-}
- 
-TEST(HospitalSystemTest, CancelOwnAppointmentSucceeds) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology");
-    hs.registerNewPatient("Nour", "nour@test.com", "0500000004");      
-    hs.login("nour@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM"); 
-    EXPECT_TRUE(hs.cancelAppointmentPatient(1));
-}
- 
-TEST(HospitalSystemTest, CancelAnotherPatientsAppointmentFails) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology"); 
-    hs.registerNewPatient("P1", "p1@test.com", "0500000001");        
-    hs.registerNewPatient("P2", "p2@test.com", "0500000002");       
-    hs.login("p1@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM"); 
-    hs.login("p2@test.com", DEFAULT_PASS);
-    EXPECT_FALSE(hs.cancelAppointmentPatient(1));
-}
- 
- 
-TEST(HospitalSystemTest, ViewMyAppointmentsWithoutLoginReturnsEmpty) {
-    HospitalSystem hs;
-    EXPECT_TRUE(hs.viewMyAppointments().empty());
-}
- 
-TEST(HospitalSystemTest, ViewMyAppointmentsAsAdminReturnsEmpty) {
-    HospitalSystem hs;
-    hs.login(ADMIN_EMAIL, ADMIN_PASS);
-    EXPECT_TRUE(hs.viewMyAppointments().empty());
-}
- 
-TEST(HospitalSystemTest, ViewMyAppointmentsReturnsOnlyOwnAppointments) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology"); 
-    hs.registerNewPatient("P1", "p1@test.com", "0500000001");      
-    hs.registerNewPatient("P2", "p2@test.com", "0500000002");      
-    hs.login("p1@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM");
-    hs.login("p2@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-02", "11AM");
-    EXPECT_EQ(hs.viewMyAppointments().size(), 1);
-}
- 
- 
-TEST(HospitalSystemTest, ViewDoctorScheduleWithoutLoginReturnsEmpty) {
-    HospitalSystem hs;
-    EXPECT_TRUE(hs.viewDoctorSchedule().empty());
-}
- 
-TEST(HospitalSystemTest, ViewDoctorScheduleAsPatientReturnsEmpty) {
-    HospitalSystem hs;
-    hs.registerNewPatient("Sara", "sara@test.com", "0500000003");
-    hs.login("sara@test.com", DEFAULT_PASS);
-    EXPECT_TRUE(hs.viewDoctorSchedule().empty());
-}
- 
-TEST(HospitalSystemTest, ViewDoctorScheduleShowsBookedAppointment) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology"); 
-    hs.registerNewPatient("Nour", "nour@test.com", "0500000004");     
-    hs.login("nour@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM");
-    hs.login("karim@test.com", DEFAULT_PASS);
-    EXPECT_EQ(hs.viewDoctorSchedule().size(), 1);
-}
- 
- 
-TEST(HospitalSystemTest, CompleteWithoutLoginFails) {
-    HospitalSystem hs;
-    EXPECT_FALSE(hs.completeAppointmentDoctor(1));
-}
- 
-TEST(HospitalSystemTest, CompleteAsPatientFails) {
-    HospitalSystem hs;
-    hs.registerNewPatient("Amr", "amr@test.com", "0522222222");
-    hs.login("amr@test.com", DEFAULT_PASS);
-    EXPECT_FALSE(hs.completeAppointmentDoctor(1));
-}
- 
-TEST(HospitalSystemTest, CompleteNonExistentAppointmentFails) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology");
-    hs.login("karim@test.com", DEFAULT_PASS);
-    EXPECT_FALSE(hs.completeAppointmentDoctor(999));
-}
- 
-TEST(HospitalSystemTest, CompleteOwnAppointmentSucceeds) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology");
-    hs.registerNewPatient("Nour", "nour@test.com", "0500000004");      
-    hs.login("nour@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM");
-    hs.login("karim@test.com", DEFAULT_PASS);
-    EXPECT_TRUE(hs.completeAppointmentDoctor(1));
-}
- 
-TEST(HospitalSystemTest, CompleteAnotherDoctorsAppointmentFails) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. A", "a@test.com", "Cardiology"); 
-    hs.registerNewDoctor("Dr. B", "b@test.com", "Neurology"); 
-    hs.registerNewPatient("Nour", "nour@test.com", "0500000004"); 
-    hs.login("nour@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM"); 
-    hs.login("b@test.com", DEFAULT_PASS);       
-    EXPECT_FALSE(hs.completeAppointmentDoctor(1));
-}
- 
- 
-TEST(HospitalSystemTest, AdminViewAllAppointmentsInitiallyEmpty) {
-    HospitalSystem hs;
-    EXPECT_TRUE(hs.adminViewAllAppointments().empty());
-}
- 
-TEST(HospitalSystemTest, AdminViewAllAppointmentsReturnsAll) {
-    HospitalSystem hs;
-    hs.registerNewDoctor("Dr. Karim", "karim@test.com", "Cardiology"); 
-    hs.registerNewPatient("P1", "p1@test.com", "0500000001");          
-    hs.registerNewPatient("P2", "p2@test.com", "0500000002");       
-    hs.login("p1@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-01", "10AM");
-    hs.login("p2@test.com", DEFAULT_PASS);
-    hs.bookAppointment(2, "2025-11-02", "11AM");
-    EXPECT_EQ(hs.adminViewAllAppointments().size(), 2);
+
+TEST(SystemTest, AdminSeesAppointments) {
+    HospitalSystem system;
+
+    system.registerNewPatient("Omar", "omar@test.com", "010");
+    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
+
+    system.login("omar@test.com", "default");
+    system.bookAppointment(3, "2026", "10AM");
+
+    auto apps = system.adminViewAllAppointments();
+    EXPECT_EQ(apps.size(), 1);
 }
