@@ -35,12 +35,8 @@ jobs:
       # ─── STEP 2 · TEST ──────────────────────────────────────────
       - name: Run unit tests
         run: |
-          TEST_COUNT=$(find tests/ -name "*.cpp" 2>/dev/null | wc -l)
-          if [ "$TEST_COUNT" -gt "0" ]; then
-            ./build/run_tests
-          else
-            echo "No test files found — skipping tests."
-          fi
+          cd build
+          ctest --output-on-failure
 
       - name: Generate coverage report
         run: |
