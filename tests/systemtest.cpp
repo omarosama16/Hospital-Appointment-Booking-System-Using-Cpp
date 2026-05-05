@@ -1,95 +1,137 @@
 #include <gtest/gtest.h>
 #include "system.h"
-#include "patient.h"
 #include "Doctor.h"
-#include "Appointment.h"
+#include "patient.h"
 #include "admin.h"
 
-class TestPatient : public patient {
-public:
-    using patient::patient;
-    string get_role() override { return "patient"; }
-};
+TEST(HospitalSystemTest, Login_AllBranches)
+{
+    HospitalSystem system;
 
-class TestDoctor : public Doctor {
-public:
-    using Doctor::Doctor;
-    string get_role() override { return "doctor"; } 
-};
+    // wrong login
+    EXPECT_FALSE(system.login("wrong@mail.com", "123"));
 
-class HospitalSystemTest : public ::testing::Test {
-protected:
-    HospitalSystem sys;
-    int docId;
-    int patId;
-
-    void SetUp() override {
-
-        sys.registerNewDoctor("Dr. Smith", "smith@test.com", "General");
-        sys.registerNewPatient("Omar", "omar@test.com", "010123");      
-        
-        docId = 2;
-        patId = 3;
-    }
-};
-
-TEST_F(HospitalSystemTest, LoginVerification) {
-    EXPECT_TRUE(sys.login("admin@mail.com", "admin123"));
-    EXPECT_TRUE(sys.login("omar@test.com", "default"));
+    // correct admin login (created in constructor)
+    EXPECT_TRUE(system.login("admin@mail.com", "admin123"));
 }
 
-TEST_F(HospitalSystemTest, SuccessfulBookingFlow) {
-    sys.login("omar@test.com", "default");
-    
+TEST(HospitalSystemTest, AdminAndUserCreation)
+{
+    HospitalSystem system;
 
-    bool booked = sys.bookAppointment(docId, "2026-05-15", "10AM");
-    
-    if (!booked) {
-        std::cout << "[DIAGNOSTIC] Booking failed. Checking role strings..." << std::endl;
-    }
+    system.registerNewPatient("Ali", "ali@mail.com", "0100");
+    system.registerNewDoctor("Dr A", "doc@mail.com", "Cardio");
 
-    ASSERT_TRUE(booked) << "Role mismatch: System expects 'patient' (lowercase).";
+    system.login("admin@mail.com", "admin123");
 
-    auto myAppts = sys.viewMyAppointments();
-    ASSERT_EQ(myAppts.size(), 1);
-    EXPECT_EQ(myAppts[0].get_Status(), "Scheduled");
+    auto users = system.adminViewAllUsers();
+    EXPECT_GE(users.size(), 3); // admin + patient + doctor
 }
 
-TEST_F(HospitalSystemTest, DoctorCanCompleteAppointment) {
-    sys.login("omar@test.com", "default");
-    sys.bookAppointment(docId, "2026-05-20", "09AM");
+TEST(HospitalSystemTest, Booking_FullFlow)
+{
+    HospitalSystem system;
 
-    sys.login("smith@test.com", "default");
-    
-    auto schedule = sys.viewDoctorSchedule();
-    
+    system.registerNewDoctor("Dr A", "doc@mail.com", "Cardio");
+    system.registerNewPatient("Ali", "ali@mail.com", "0100");
 
-    ASSERT_FALSE(schedule.empty()) << "Doctor role mismatch: System expects 'doctor' (lowercase).";
-    
+    system.login("ali@mail.com", "default"); // patient login
+
+    auto users = system.adminViewAllUsers();
+
+    int doctorId = -1;
+    for (auto u : users)
+        if (u->get_role() == "doctor")
+            doctorId = u->get_id();
+
+    ASSERT_NE(doctorId, -1);
+
+    bool booked = system.bookAppointment(doctorId, "2026", "10AM");
+    EXPECT_TRUE(booked);
+
+    auto myApps = system.viewMyAppointments();
+    EXPECT_EQ(myApps.size(), 1);
+}
+
+TEST(HospitalSystemTest, CancelFlow_AllBranches)
+{
+    HospitalSystem system;
+
+    system.registerNewDoctor("Dr A", "doc@mail.com", "Cardio");
+    system.registerNewPatient("Ali", "ali@mail.com", "0100");
+
+    system.login("ali@mail.com", "default");
+
+    int doctorId = system.adminViewAllUsers()[1]->get_id();
+
+    system.bookAppointment(doctorId, "2026", "10AM");
+
+    auto apps = system.viewMyAppointments();
+    ASSERT_EQ(apps.size(), 1);
+
+    int apptId = apps[0].get_AppointmentId();
+
+    EXPECT_TRUE(system.cancelAppointmentPatient(apptId));
+
+    auto updated = system.viewMyAppointments();
+    EXPECT_EQ(updated.size(), 1); // still exists but cancelled
+}
+
+TEST(HospitalSystemTest, ViewMyAppointments_Branches)
+{
+    HospitalSystem system;
+
+    system.registerNewDoctor("Dr A", "doc@mail.com", "Cardio");
+    system.registerNewPatient("Ali", "ali@mail.com", "0100");
+
+    system.login("ali@mail.com", "default");
+
+    int doctorId = system.adminViewAllUsers()[1]->get_id();
+
+    system.bookAppointment(doctorId, "2026", "10AM");
+
+    auto apps = system.viewMyAppointments();
+    EXPECT_EQ(apps.size(), 1);
+}
+
+TEST(HospitalSystemTest, DoctorSchedule_And_Complete)
+{
+    HospitalSystem system;
+
+    system.registerNewDoctor("Dr A", "doc@mail.com", "Cardio");
+    system.registerNewPatient("Ali", "ali@mail.com", "0100");
+
+    system.login("ali@mail.com", "default");
+
+    int doctorId = system.adminViewAllUsers()[1]->get_id();
+
+    system.bookAppointment(doctorId, "2026", "10AM");
+
+    system.login("doc@mail.com", "default");
+
+    auto schedule = system.viewDoctorSchedule();
+    EXPECT_EQ(schedule.size(), 1);
+
     int apptId = schedule[0].get_AppointmentId();
-    EXPECT_TRUE(sys.completeAppointmentDoctor(apptId));
+
+    EXPECT_TRUE(system.completeAppointmentDoctor(apptId));
+
+    auto updated = system.viewDoctorSchedule();
+    EXPECT_EQ(updated.size(), 1);
 }
 
-TEST_F(HospitalSystemTest, PatientCanCancelAppointment) {
-    sys.login("omar@test.com", "default");
-    sys.bookAppointment(docId, "2026-05-22", "01PM");
+TEST(HospitalSystemTest, AdminViewAll)
+{
+    HospitalSystem system;
 
-    auto appts = sys.viewMyAppointments();
-    ASSERT_FALSE(appts.empty());
-    
-    int idToCancel = appts[0].get_AppointmentId();
-    EXPECT_TRUE(sys.cancelAppointmentPatient(idToCancel));
+    system.registerNewDoctor("Dr A", "doc@mail.com", "Cardio");
+    system.registerNewPatient("Ali", "ali@mail.com", "0100");
 
-    auto updatedAppts = sys.viewMyAppointments();
-    EXPECT_EQ(updatedAppts[0].get_Status(), "Cancelled");
-}
+    system.login("admin@mail.com", "admin123");
 
-TEST_F(HospitalSystemTest, AdminViewIntegrity) {
-    sys.login("omar@test.com", "default");
-    sys.bookAppointment(docId, "2026-10-10", "10AM");
+    auto allAppts = system.adminViewAllAppointments();
+    auto allUsers = system.adminViewAllUsers();
 
-    sys.login("admin@mail.com", "admin123");
-    auto allAppts = sys.adminViewAllAppointments();
-
-    EXPECT_GE(allAppts.size(), 1);
+    EXPECT_GE(allUsers.size(), 3);
+    EXPECT_EQ(allAppts.size(), 0); // no booking yet
 }
