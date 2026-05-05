@@ -1,51 +1,52 @@
 name: C++ CI Pipeline
-
+ 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
+ 
 jobs:
   build-test-analyze:
     runs-on: ubuntu-latest
-
+ 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      # ─── STEP 1 · BUILD ─────────────────────────────────────────
+ 
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake g++ libgtest-dev gcovr
-
+ 
       - name: Configure CMake
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_FLAGS="--coverage" \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-
+ 
       - name: Build project
         run: cmake --build build --parallel
-
-      # ─── STEP 2 · TEST ──────────────────────────────────────────
+ 
       - name: Run unit tests
         run: |
-          cd build
-          ctest --output-on-failure
-
+          TEST_COUNT=$(find tests/ -name "*.cpp" 2>/dev/null | wc -l)
+          if [ "$TEST_COUNT" -gt "0" ]; then
+            cd build && ctest --output-on-failure --timeout 30
+          else
+            echo "No test files found — skipping tests."
+          fi
+ 
       - name: Generate coverage report
         run: |
           gcovr --root . \
             --sonarqube \
             --output coverage.xml \
             --exclude tests/
-
-      # ─── STEP 3 · CODE QUALITY (SonarQube) ──────────────────────
+ 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
