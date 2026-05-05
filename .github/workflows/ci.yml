@@ -19,8 +19,11 @@ jobs:
       # ─── STEP 1 · BUILD ─────────────────────────────────────────
       - name: Install dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake g++ libgtest-dev gcovr
+          sudo apt-get update -y
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y \
+            -o Acquire::Retries=3 \
+            -o Acquire::http::Timeout=30 \
+            cmake g++ libgtest-dev gcovr
 
       - name: Configure CMake
         run: |
