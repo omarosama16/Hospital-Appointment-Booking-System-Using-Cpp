@@ -1,42 +1,23 @@
-cmake_minimum_required(VERSION 3.10)
-project(HospitalAppointmentSystem)
+cmake_minimum_required(VERSION 3.16)
+project(HospitalAppointmentBookingSystem)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-# Force -std=c++17 explicitly into compile commands for SonarCloud
-add_compile_options(-std=c++17)
-
-include_directories(include)
-
-file(GLOB_RECURSE CORE_SOURCES src/core/*.cpp)
-
-add_executable(app
-    src/app/Main.cpp
-    ${CORE_SOURCES}
-)
-target_include_directories(app PRIVATE include)
 
 enable_testing()
 
-file(GLOB_RECURSE TEST_SOURCES tests/*.cpp)
+find_package(GTest REQUIRED)
 
-if(TEST_SOURCES)
-    find_package(GTest REQUIRED)
+file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/*.cpp)
+list(FILTER SRC_FILES EXCLUDE REGEX ".*main\\.cpp$")
 
-    add_executable(runTests
-        ${TEST_SOURCES}
-        ${CORE_SOURCES}
-    )
+file(GLOB_RECURSE ALL_SRC_FILES CONFIGURE_DEPENDS src/*.cpp)
+add_executable(hospital_app ${ALL_SRC_FILES})
 
-    target_link_libraries(runTests
-        GTest::gtest
-        GTest::gtest_main
-        pthread
-    )
+file(GLOB_RECURSE TEST_FILES CONFIGURE_DEPENDS tests/*.cpp)
 
-    target_include_directories(runTests PRIVATE include)
-
-    add_test(NAME AllTests COMMAND runTests)
+if(TEST_FILES)
+    add_executable(run_tests ${TEST_FILES} ${SRC_FILES})
+    target_include_directories(run_tests PRIVATE src)
+    target_link_libraries(run_tests GTest::GTest GTest::Main)
+    add_test(NAME unit_tests COMMAND run_tests)
 endif()
