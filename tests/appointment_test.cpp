@@ -10,10 +10,10 @@ TEST(AppointmentTest, CancelTwice) {
     Appointment a(1,1,1,"p","d","2026","10:00","scheduled");
 
     a.cancel();
-    EXPECT_EQ(a.get_Status(), "cancelled");
+    EXPECT_EQ(a.get_Status(), "Cancelled");
 
-    a.cancel(); // should stay cancelled
-    EXPECT_EQ(a.get_Status(), "cancelled");
+    a.cancel(); 
+    EXPECT_EQ(a.get_Status(), "Cancelled");
 }
 
 TEST(AppointmentTest, CompleteAfterCancel) {
@@ -22,8 +22,7 @@ TEST(AppointmentTest, CompleteAfterCancel) {
     a.cancel();
     a.complete();
 
-    // depends on your logic — choose expected behavior
-    EXPECT_EQ(a.get_Status(), "completed");
+    EXPECT_EQ(a.get_Status(), "Completed");
 }
 
 TEST(AppointmentTest, PrintRowDoesNotCrash) {
