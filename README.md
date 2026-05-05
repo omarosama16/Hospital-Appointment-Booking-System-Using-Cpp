@@ -7,7 +7,7 @@ The system was developed as part of the SCS253 Software Process & Quality Manage
 - Simplify appointment scheduling process
 - Reduce patient waiting time
 - Manage doctor availability efficiently
-- Provide a structured system for hospital operations
+- Provide a structured system for hospital operations 
 # Features
 # Patient features
 - Book appointment
