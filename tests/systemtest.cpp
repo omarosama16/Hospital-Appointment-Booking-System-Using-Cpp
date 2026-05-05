@@ -1,75 +1,112 @@
 #include <gtest/gtest.h>
 #include "system.h"
-#include "Doctor.h"
 #include "patient.h"
+#include "Doctor.h"
+#include "Appointment.h"
 
-// helper: safely get doctor id from system users
-int getDoctorId(HospitalSystem &system)
-{
-    auto users = system.adminViewAllUsers();
-    for (auto u : users)
-    {
-        if (u->get_role() == "doctor")
-            return u->get_id();
+class HospitalSystemTest : public ::testing::Test {
+protected:
+    HospitalSystem sys;
+
+    void SetUp() override {
+
+        sys.registerNewDoctor("Dr. House", "house@hospital.com", "Diagnostics"); 
+        sys.registerNewPatient("Omar", "omar@test.com", "010123");       
     }
-    return -1;
+};
+
+
+TEST_F(HospitalSystemTest, AdminInitialLoginWorks) {
+    EXPECT_TRUE(sys.login("admin@mail.com", "admin123"));
 }
 
-TEST(SystemTest, FullSystemCoverageSafe)
-{
-    HospitalSystem system;
-
-    // ---------- create doctor ----------
-    system.registerNewDoctor("Dr A", "doc@mail.com", "cardio");
-    int docId = getDoctorId(system);
-    ASSERT_NE(docId, -1);
-
-    // ---------- create patient ----------
-    system.registerNewPatient("p1", "p@mail.com", "123");
-
-    // login patient (must succeed)
-    ASSERT_TRUE(system.login("p@mail.com", "default"));
-
-    // ---------- BOOK (valid path) ----------
-    bool booked = system.bookAppointment(docId, "2026", "10AM");
-    ASSERT_TRUE(booked);
-
-    auto apps = system.viewMyAppointments();
-    ASSERT_EQ(apps.size(), 1);
-
-    // ---------- CONFIRM CONFLICT PATH ----------
-    bool conflict = system.bookAppointment(docId, "2026", "10AM");
-    ASSERT_FALSE(conflict);
-
-    // ---------- cancel success ----------
-    int apptId = apps[0].get_AppointmentId();
-    ASSERT_TRUE(system.cancelAppointmentPatient(apptId));
-
-    // ---------- cancel again (should fail) ----------
-    ASSERT_FALSE(system.cancelAppointmentPatient(apptId));
-
-    // ---------- doctor login ----------
-    ASSERT_TRUE(system.login("doc@mail.com", "default"));
-
-    // doctor schedule view (after switching user role)
-    auto schedule = system.viewDoctorSchedule();
-    // may be 0 or 1 depending on cancellation state, both OK
-
-    // ---------- complete appointment (safe branch) ----------
-    if (!schedule.empty())
-    {
-        system.completeAppointmentDoctor(schedule[0].get_AppointmentId());
-    }
-
-    // ---------- admin view ----------
-    auto allApps = system.adminViewAllAppointments();
-    ASSERT_GE(allApps.size(), 1);
+TEST_F(HospitalSystemTest, PatientLoginWithDefaultPassword) {
+    EXPECT_TRUE(sys.login("omar@test.com", "default"));
 }
 
-TEST(SystemTest, LoginBranches)
-{
-    HospitalSystem system;
+TEST_F(HospitalSystemTest, LoginFailsWithWrongCredentials) {
+    EXPECT_FALSE(sys.login("omar@test.com", "wrong_pass"));
+    EXPECT_FALSE(sys.login("nonexistent@test.com", "default"));
+}
 
-    ASSERT_FALSE(system.login("wrong", "wrong"));
-    ASSERT_FALSE(system.login("", ""));
+
+TEST_F(HospitalSystemTest, SuccessfulAppointmentBooking) {
+    sys.login("omar@test.com", "default");
+    
+    bool result = sys.bookAppointment(2, "2026-05-20", "10AM");
+    
+    EXPECT_TRUE(result);
+    auto myAppts = sys.viewMyAppointments();
+    ASSERT_EQ(myAppts.size(), 1);
+    EXPECT_EQ(myAppts[0].get_Status(), "Scheduled");
+    EXPECT_EQ(myAppts[0].get_Time(), "10AM");
+}
+
+TEST_F(HospitalSystemTest, DetectsSchedulingConflict) {
+    sys.login("omar@test.com", "default");
+    
+    sys.bookAppointment(2, "2026-05-20", "11AM");
+    
+    bool conflict = sys.bookAppointment(2, "2026-05-20", "11AM");
+    
+    EXPECT_FALSE(conflict);
+}
+
+
+TEST_F(HospitalSystemTest, DoctorCanViewAndCompleteAppointment) {
+    sys.login("omar@test.com", "default");
+    sys.bookAppointment(2, "2026-05-22", "10AM");
+
+    sys.login("house@hospital.com", "default");
+    auto schedule = sys.viewDoctorSchedule();
+    ASSERT_FALSE(schedule.empty());
+    
+    int apptId = schedule[0].get_AppointmentId();
+    
+    EXPECT_TRUE(sys.completeAppointmentDoctor(apptId));
+    
+    auto updatedSchedule = sys.viewDoctorSchedule();
+    EXPECT_EQ(updatedSchedule[0].get_Status(), "Completed");
+}
+
+
+TEST_F(HospitalSystemTest, PatientCanCancelAppointment) {
+    sys.login("omar@test.com", "default");
+    sys.bookAppointment(2, "2026-05-25", "10AM");
+    
+    auto appts = sys.viewMyAppointments();
+    int idToCancel = appts[0].get_AppointmentId();
+    
+    EXPECT_TRUE(sys.cancelAppointmentPatient(idToCancel));
+    
+    auto updatedAppts = sys.viewMyAppointments();
+    EXPECT_EQ(updatedAppts[0].get_Status(), "Cancelled");
+}
+
+TEST_F(HospitalSystemTest, RoleSecurityPreventsIllegalActions) {
+    sys.login("house@hospital.com", "default");
+    
+    bool result = sys.bookAppointment(2, "2026-05-25", "10AM");
+    
+    EXPECT_FALSE(result);
+}
+
+
+TEST_F(HospitalSystemTest, AdminCanSeeAllUsers) {
+    sys.login("admin@mail.com", "admin123");
+    
+    auto allUsers = sys.adminViewAllUsers();
+    
+    EXPECT_EQ(allUsers.size(), 3);
+}
+
+TEST_F(HospitalSystemTest, AdminCanSeeAllAppointments) {
+    sys.login("omar@test.com", "default");
+    sys.bookAppointment(2, "2026-06-01", "10AM");
+    sys.bookAppointment(2, "2026-06-02", "11AM");
+    
+    sys.login("admin@mail.com", "admin123");
+    auto allAppts = sys.adminViewAllAppointments();
+    
+    EXPECT_EQ(allAppts.size(), 2);
 }
