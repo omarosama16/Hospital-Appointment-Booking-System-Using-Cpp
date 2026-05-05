@@ -12,7 +12,7 @@ The system was developed as part of the SCS253 Software Process & Quality Manage
 # Patient features 
 - Book appointment
 - Cancel appointment
-- View appointment details
+- View appointment details 
 
 # Admin features 
 - Add / remove doctors
