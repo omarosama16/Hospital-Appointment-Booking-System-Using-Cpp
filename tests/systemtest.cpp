@@ -10,11 +10,17 @@ static int getDoctorId(HospitalSystem &system)
     return -1;
 }
 
+static void ensurePatientLogin(HospitalSystem &system)
+{
+    // ALWAYS re-login before actions (critical fix)
+    ASSERT_TRUE(system.login("ali@mail.com", "default"));
+}
+
 TEST(HospitalSystemTest, Login_AllBranches)
 {
     HospitalSystem system;
 
-    EXPECT_FALSE(system.login("wrong@mail.com", "wrong"));
+    EXPECT_FALSE(system.login("x@mail.com", "x"));
     EXPECT_TRUE(system.login("admin@mail.com", "admin123"));
 }
 
@@ -35,15 +41,13 @@ TEST(HospitalSystemTest, Booking_FullFlow)
 {
     HospitalSystem system;
 
-    // create users
     system.registerNewDoctor("Dr A", "doc@mail.com", "Cardio");
     system.registerNewPatient("Ali", "ali@mail.com", "0100");
 
     int doctorId = getDoctorId(system);
     ASSERT_NE(doctorId, -1);
 
-    // IMPORTANT: login MUST use default password
-    ASSERT_TRUE(system.login("ali@mail.com", "default"));
+    ensurePatientLogin(system);
 
     bool booked = system.bookAppointment(doctorId, "2026", "10AM");
     EXPECT_TRUE(booked);
@@ -61,7 +65,7 @@ TEST(HospitalSystemTest, CancelFlow_AllBranches)
 
     int doctorId = getDoctorId(system);
 
-    ASSERT_TRUE(system.login("ali@mail.com", "default"));
+    ensurePatientLogin(system);
     ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
     auto apps = system.viewMyAppointments();
@@ -81,7 +85,7 @@ TEST(HospitalSystemTest, ViewMyAppointments_Branches)
 
     int doctorId = getDoctorId(system);
 
-    ASSERT_TRUE(system.login("ali@mail.com", "default"));
+    ensurePatientLogin(system);
     ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
     auto apps = system.viewMyAppointments();
@@ -97,7 +101,7 @@ TEST(HospitalSystemTest, DoctorSchedule_And_Complete)
 
     int doctorId = getDoctorId(system);
 
-    ASSERT_TRUE(system.login("ali@mail.com", "default"));
+    ensurePatientLogin(system);
     ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
     ASSERT_TRUE(system.login("doc@mail.com", "default"));
