@@ -35,11 +35,11 @@ jobs:
       # ─── STEP 2 · TEST ──────────────────────────────────────────
       - name: Run unit tests
         run: |
-          cd build
-          if ctest --show-only 2>&1 | grep -q "Test #"; then
-            ctest --output-on-failure --timeout 10
+          TEST_COUNT=$(find tests/ -name "*.cpp" 2>/dev/null | wc -l)
+          if [ "$TEST_COUNT" -gt "0" ]; then
+            cd build && ctest --output-on-failure --timeout 30
           else
-            echo "No tests found, skipping."
+            echo "No test files found in tests/ — skipping tests."
           fi
  
       - name: Generate coverage report
@@ -55,3 +55,4 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
+ 
