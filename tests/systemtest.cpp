@@ -5,8 +5,10 @@ TEST(SystemTest, AdminExistsByDefault) {
     HospitalSystem system;
 
     auto users = system.adminViewAllUsers();
+
     ASSERT_EQ(users.size(), 1);
-    EXPECT_EQ(users[0]->get_role(), "admin");
+
+    EXPECT_EQ(users[0]->get_role(), "Admin");
 }
 
 TEST(SystemTest, RegisterCreatesUsers) {
@@ -77,7 +79,7 @@ TEST(SystemTest, ConflictLogicExecutes) {
     system.bookAppointment(doctorId, "2026", "10AM");
     bool second = system.bookAppointment(doctorId, "2026", "10AM");
 
-    EXPECT_FALSE(second); // conflict should block duplicate
+    EXPECT_FALSE(second);
 }
 
 TEST(SystemTest, CancelAppointmentFlow) {
