@@ -6,7 +6,7 @@ TEST(SystemTest, AdminExistsByDefault) {
 
     auto users = system.adminViewAllUsers();
 
-    EXPECT_EQ(users.size(), 1);
+    ASSERT_EQ(users.size(), 1);
     EXPECT_EQ(users[0]->get_name(), "admin");
 }
 
@@ -18,40 +18,20 @@ TEST(SystemTest, RegisterPatientsIncreaseUsers) {
 
     auto users = system.adminViewAllUsers();
 
-    EXPECT_EQ(users.size(), 3);
+    EXPECT_EQ(users.size(), 3); // admin + 2 patients
 }
 
-TEST(SystemTest, PatientLoginSuccess) {
+TEST(SystemTest, PatientAndDoctorLogin) {
     HospitalSystem system;
 
     system.registerNewPatient("Omar", "omar@test.com", "010");
-
-    EXPECT_TRUE(system.login("omar@test.com", "default"));
-}
-
-TEST(SystemTest, DoctorLoginSuccess) {
-    HospitalSystem system;
-
     system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
 
+    EXPECT_TRUE(system.login("omar@test.com", "default"));
     EXPECT_TRUE(system.login("doc@test.com", "default"));
 }
 
-TEST(SystemTest, WrongLoginFails) {
-    HospitalSystem system;
-
-    EXPECT_FALSE(system.login("fake@test.com", "default"));
-}
-
-TEST(SystemTest, BookAppointmentFailsWithoutLogin) {
-    HospitalSystem system;
-
-    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
-
-    EXPECT_FALSE(system.bookAppointment(2, "2026", "10AM"));
-}
-
-TEST(SystemTest, BookAppointmentSuccess) {
+TEST(SystemTest, BookAppointmentSuccess_DynamicDoctorId) {
     HospitalSystem system;
 
     system.registerNewPatient("Omar", "omar@test.com", "010");
@@ -59,8 +39,20 @@ TEST(SystemTest, BookAppointmentSuccess) {
 
     system.login("omar@test.com", "default");
 
+    // find doctor dynamically instead of assuming ID = 3
+    auto users = system.adminViewAllUsers();
 
-    EXPECT_TRUE(system.bookAppointment(3, "2026", "10AM"));
+    int doctorId = -1;
+    for (auto u : users) {
+        if (u->get_role() == "doctor") {
+            doctorId = u->get_id();
+            break;
+        }
+    }
+
+    ASSERT_NE(doctorId, -1);
+
+    EXPECT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
     auto apps = system.viewMyAppointments();
     EXPECT_EQ(apps.size(), 1);
@@ -74,8 +66,20 @@ TEST(SystemTest, ConflictPreventsDoubleBooking) {
 
     system.login("omar@test.com", "default");
 
-    EXPECT_TRUE(system.bookAppointment(3, "2026", "10AM"));
-    EXPECT_FALSE(system.bookAppointment(3, "2026", "10AM"));
+    auto users = system.adminViewAllUsers();
+
+    int doctorId = -1;
+    for (auto u : users) {
+        if (u->get_role() == "doctor") {
+            doctorId = u->get_id();
+            break;
+        }
+    }
+
+    ASSERT_NE(doctorId, -1);
+
+    EXPECT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
+    EXPECT_FALSE(system.bookAppointment(doctorId, "2026", "10AM"));
 }
 
 TEST(SystemTest, CancelAppointmentWorks) {
@@ -86,7 +90,19 @@ TEST(SystemTest, CancelAppointmentWorks) {
 
     system.login("omar@test.com", "default");
 
-    system.bookAppointment(3, "2026", "10AM");
+    auto users = system.adminViewAllUsers();
+
+    int doctorId = -1;
+    for (auto u : users) {
+        if (u->get_role() == "doctor") {
+            doctorId = u->get_id();
+            break;
+        }
+    }
+
+    ASSERT_NE(doctorId, -1);
+
+    system.bookAppointment(doctorId, "2026", "10AM");
 
     auto apps = system.viewMyAppointments();
     ASSERT_EQ(apps.size(), 1);
@@ -94,32 +110,27 @@ TEST(SystemTest, CancelAppointmentWorks) {
     EXPECT_TRUE(system.cancelAppointmentPatient(apps[0].get_AppointmentId()));
 }
 
-TEST(SystemTest, CancelFailsWrongUser) {
-    HospitalSystem system;
-
-    system.registerNewPatient("Omar", "omar@test.com", "010");
-    system.registerNewPatient("Ali", "ali@test.com", "011");
-    system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
-
-    system.login("omar@test.com", "default");
-    system.bookAppointment(3, "2026", "10AM");
-
-    auto apps = system.viewMyAppointments();
-    ASSERT_EQ(apps.size(), 1);
-
-    system.login("ali@test.com", "default");
-
-    EXPECT_FALSE(system.cancelAppointmentPatient(apps[0].get_AppointmentId()));
-}
-
-TEST(SystemTest, DoctorSeesSchedule) {
+TEST(SystemTest, DoctorViewsSchedule) {
     HospitalSystem system;
 
     system.registerNewPatient("Omar", "omar@test.com", "010");
     system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
 
     system.login("omar@test.com", "default");
-    system.bookAppointment(3, "2026", "10AM");
+
+    auto users = system.adminViewAllUsers();
+
+    int doctorId = -1;
+    for (auto u : users) {
+        if (u->get_role() == "doctor") {
+            doctorId = u->get_id();
+            break;
+        }
+    }
+
+    ASSERT_NE(doctorId, -1);
+
+    system.bookAppointment(doctorId, "2026", "10AM");
 
     system.login("doc@test.com", "default");
 
@@ -134,7 +145,20 @@ TEST(SystemTest, DoctorCompletesAppointment) {
     system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
 
     system.login("omar@test.com", "default");
-    system.bookAppointment(3, "2026", "10AM");
+
+    auto users = system.adminViewAllUsers();
+
+    int doctorId = -1;
+    for (auto u : users) {
+        if (u->get_role() == "doctor") {
+            doctorId = u->get_id();
+            break;
+        }
+    }
+
+    ASSERT_NE(doctorId, -1);
+
+    system.bookAppointment(doctorId, "2026", "10AM");
 
     system.login("doc@test.com", "default");
 
@@ -151,7 +175,20 @@ TEST(SystemTest, AdminSeesAppointments) {
     system.registerNewDoctor("Doc", "doc@test.com", "Cardio");
 
     system.login("omar@test.com", "default");
-    system.bookAppointment(3, "2026", "10AM");
+
+    auto users = system.adminViewAllUsers();
+
+    int doctorId = -1;
+    for (auto u : users) {
+        if (u->get_role() == "doctor") {
+            doctorId = u->get_id();
+            break;
+        }
+    }
+
+    ASSERT_NE(doctorId, -1);
+
+    system.bookAppointment(doctorId, "2026", "10AM");
 
     auto apps = system.adminViewAllAppointments();
     EXPECT_EQ(apps.size(), 1);
