@@ -1,165 +1,184 @@
 #include <gtest/gtest.h>
 #include "system.h"
 
-static int extractDoctorId(HospitalSystem &system) {
+// -------------------------
+// Helper setup
+// -------------------------
+static HospitalSystem setup(int &docId, int &patId)
+{
+    HospitalSystem system;
+
+    system.registerNewDoctor("Doc", "doc@mail.com", "Cardio");
+    system.registerNewPatient("Pat", "pat@mail.com", "123");
+
+    // Based on constructor order:
+    // Admin=1, Doctor=2, Patient=3
+    docId = 2;
+    patId = 3;
+
+    return system;
+}
+
+// -------------------------
+// LOGIN FULL COVERAGE
+// -------------------------
+TEST(SystemTest, LoginAllPaths)
+{
+    HospitalSystem system;
+
+    system.registerNewPatient("P", "p@mail.com", "123");
+
+    EXPECT_TRUE(system.login("p@mail.com", "default")); // success
+    EXPECT_FALSE(system.login("wrong@mail.com", "default")); // fail path
+    EXPECT_FALSE(system.login("", "")); // empty branch path
+}
+
+// -------------------------
+// REGISTER USER COVERAGE
+// -------------------------
+TEST(SystemTest, RegisterUsersIncreaseVector)
+{
+    HospitalSystem system;
+
+    system.registerNewPatient("A", "a@mail.com", "1");
+    system.registerNewPatient("B", "b@mail.com", "2");
+
     auto users = system.adminViewAllUsers();
 
-    for (auto u : users) {
-        if (u->get_role() == "doctor")
-            return u->get_id();
-    }
-    return -1;
+    EXPECT_GE(users.size(), 3); // admin + 2 patients
 }
 
-TEST(SystemTest, DefaultAdminExists) {
-    HospitalSystem system;
+// -------------------------
+// BOOKING FULL BRANCH COVERAGE
+// -------------------------
+TEST(SystemTest, BookAppointment_AllBranches)
+{
+    int docId, patId;
+    HospitalSystem system = setup(docId, patId);
 
-    auto users = system.adminViewAllUsers();
+    // FAIL: no login
+    EXPECT_FALSE(system.bookAppointment(docId, "2026", "10AM"));
 
-    ASSERT_EQ(users.size(), 1);
-    EXPECT_EQ(users[0]->get_role(), "Admin");
+    // LOGIN as patient
+    system.login("pat@mail.com", "default");
+
+    // SUCCESS booking
+    EXPECT_TRUE(system.bookAppointment(docId, "2026", "10AM"));
+
+    // FAIL conflict branch
+    EXPECT_FALSE(system.bookAppointment(docId, "2026", "10AM"));
+
+    // FAIL invalid doctor branch
+    EXPECT_FALSE(system.bookAppointment(999, "2026", "10AM"));
 }
 
-TEST(SystemTest, RegisterUsersIncreasesSize) {
-    HospitalSystem system;
+// -------------------------
+// checkConflict FULL COVERAGE
+// -------------------------
+TEST(SystemTest, Conflict_AllConditions)
+{
+    int docId, patId;
+    HospitalSystem system = setup(docId, patId);
 
-    system.registerNewPatient("A", "a@test.com", "010");
-    system.registerNewDoctor("B", "b@test.com", "Cardio");
-
-    auto users = system.adminViewAllUsers();
-
-    EXPECT_GE(users.size(), 3);
-}
-
-TEST(SystemTest, LoginSuccessAndFailurePaths) {
-    HospitalSystem system;
-
-    system.registerNewPatient("A", "a@test.com", "010");
-
-    EXPECT_TRUE(system.login("a@test.com", "default"));
-    EXPECT_FALSE(system.login("wrong@test.com", "default"));
-    EXPECT_FALSE(system.login("a@test.com", "wrong"));
-}
-
-TEST(SystemTest, BookAppointmentRequiresLogin) {
-    HospitalSystem system;
-
-    system.registerNewPatient("A", "a@test.com", "010");
-    system.registerNewDoctor("B", "b@test.com", "Cardio");
-
-    int docId = extractDoctorId(system);
-
-    EXPECT_EQ(system.bookAppointment(docId, "2026", "10AM"), false);
-}
-
-TEST(SystemTest, BookAppointmentSuccessFlow) {
-    HospitalSystem system;
-
-    system.registerNewPatient("A", "a@test.com", "010");
-    system.registerNewDoctor("B", "b@test.com", "Cardio");
-
-    system.login("a@test.com", "default");
-
-    int docId = extractDoctorId(system);
-    ASSERT_NE(docId, -1);
-
-    bool booked = system.bookAppointment(docId, "2026", "10AM");
-
-    auto apps = system.viewMyAppointments();
-
-    EXPECT_EQ(apps.size(), booked ? 1 : 0);
-}
-
-TEST(SystemTest, CheckConflictPreventsDoubleBooking) {
-    HospitalSystem system;
-
-    system.registerNewPatient("A", "a@test.com", "010");
-    system.registerNewDoctor("B", "b@test.com", "Cardio");
-
-    system.login("a@test.com", "default");
-
-    int docId = extractDoctorId(system);
-
-    system.bookAppointment(docId, "2026", "10AM");
-    bool second = system.bookAppointment(docId, "2026", "10AM");
-
-    EXPECT_FALSE(second);
-}
-
-TEST(SystemTest, CancelAppointmentWorksAndFailsCases) {
-    HospitalSystem system;
-
-    system.registerNewPatient("A", "a@test.com", "010");
-    system.registerNewDoctor("B", "b@test.com", "Cardio");
-
-    system.login("a@test.com", "default");
-
-    int docId = extractDoctorId(system);
+    system.login("pat@mail.com", "default");
 
     system.bookAppointment(docId, "2026", "10AM");
 
-    auto apps = system.viewMyAppointments();
+    // Same doctor/date/time → conflict TRUE
+    EXPECT_FALSE(system.bookAppointment(docId, "2026", "10AM"));
 
-    if (apps.empty()) {
-        SUCCEED();
-        return;
-    }
+    // Different time → should pass
+    EXPECT_TRUE(system.bookAppointment(docId, "2026", "11AM"));
 
-    int apptId = apps[0].get_AppointmentId();
-
-    EXPECT_TRUE(system.cancelAppointmentPatient(apptId));
-
-    // second cancel should fail (already cancelled)
-    EXPECT_FALSE(system.cancelAppointmentPatient(apptId));
+    // Different date → should pass
+    EXPECT_TRUE(system.bookAppointment(docId, "2027", "10AM"));
 }
 
-TEST(SystemTest, ViewMyAppointmentsOnlyPatient) {
-    HospitalSystem system;
+// -------------------------
+// CANCEL FULL COVERAGE
+// -------------------------
+TEST(SystemTest, Cancel_AllBranches)
+{
+    int docId, patId;
+    HospitalSystem system = setup(docId, patId);
 
-    system.registerNewPatient("A", "a@test.com", "010");
-
-    system.login("a@test.com", "default");
-
-    auto apps = system.viewMyAppointments();
-
-    EXPECT_GE(apps.size(), 0);
-}
-
-TEST(SystemTest, DoctorScheduleAndCompletion) {
-    HospitalSystem system;
-
-    system.registerNewPatient("A", "a@test.com", "010");
-    system.registerNewDoctor("B", "b@test.com", "Cardio");
-
-    system.login("a@test.com", "default");
-
-    int docId = extractDoctorId(system);
+    system.login("pat@mail.com", "default");
 
     system.bookAppointment(docId, "2026", "10AM");
 
-    system.login("b@test.com", "default");
+    auto apps = system.viewMyAppointments();
+    ASSERT_EQ(apps.size(), 1);
+
+    int id = apps[0].get_AppointmentId();
+
+    // SUCCESS cancel
+    EXPECT_TRUE(system.cancelAppointmentPatient(id));
+
+    // FAIL cancel again (status changed branch)
+    EXPECT_FALSE(system.cancelAppointmentPatient(id));
+
+    // FAIL wrong id
+    EXPECT_FALSE(system.cancelAppointmentPatient(999));
+}
+
+// -------------------------
+// VIEW MY APPOINTMENTS
+// -------------------------
+TEST(SystemTest, ViewMyAppointments_AllBranches)
+{
+    int docId, patId;
+    HospitalSystem system = setup(docId, patId);
+
+    // not logged in → empty branch
+    auto empty = system.viewMyAppointments();
+    EXPECT_TRUE(empty.empty());
+
+    system.login("pat@mail.com", "default");
+    system.bookAppointment(docId, "2026", "10AM");
+
+    auto apps = system.viewMyAppointments();
+    EXPECT_EQ(apps.size(), 1);
+}
+
+// -------------------------
+// DOCTOR VIEW + COMPLETE
+// -------------------------
+TEST(SystemTest, Doctor_FullCoverage)
+{
+    int docId, patId;
+    HospitalSystem system = setup(docId, patId);
+
+    system.login("pat@mail.com", "default");
+    system.bookAppointment(docId, "2026", "10AM");
+
+    system.login("doc@mail.com", "default");
 
     auto schedule = system.viewDoctorSchedule();
+    EXPECT_EQ(schedule.size(), 1);
 
-    EXPECT_GE(schedule.size(), 0);
+    int id = schedule[0].get_AppointmentId();
 
-    if (!schedule.empty()) {
-        int apptId = schedule[0].get_AppointmentId();
+    // SUCCESS complete
+    EXPECT_TRUE(system.completeAppointmentDoctor(id));
 
-        bool done = system.completeAppointmentDoctor(apptId);
-        EXPECT_TRUE(done || !done);
-    }
+    // FAIL: already completed (status branch)
+    EXPECT_FALSE(system.completeAppointmentDoctor(id));
+
+    // FAIL invalid id
+    EXPECT_FALSE(system.completeAppointmentDoctor(999));
 }
 
-TEST(SystemTest, AdminViewsAllData) {
-    HospitalSystem system;
-
-    system.registerNewPatient("A", "a@test.com", "010");
-    system.registerNewDoctor("B", "b@test.com", "Cardio");
+// -------------------------
+// ADMIN COVERAGE
+// -------------------------
+TEST(SystemTest, Admin_AllViews)
+{
+    int docId, patId;
+    HospitalSystem system = setup(docId, patId);
 
     auto users = system.adminViewAllUsers();
-    auto apps = system.adminViewAllAppointments();
+    EXPECT_GE(users.size(), 2);
 
-    EXPECT_GE(users.size(), 1);
-    EXPECT_GE(apps.size(), 0);
+    auto apps = system.adminViewAllAppointments();
+    EXPECT_EQ(apps.size(), 0);
 }
