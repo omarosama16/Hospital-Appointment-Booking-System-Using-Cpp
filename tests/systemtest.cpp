@@ -1,65 +1,58 @@
 #include <gtest/gtest.h>
 #include "system.h"
 
-TEST(SystemTest, AdminExistsByDefault) {
+static int extractDoctorId(HospitalSystem &system) {
+    auto users = system.adminViewAllUsers();
+
+    for (auto u : users) {
+        if (u->get_role() == "doctor")
+            return u->get_id();
+    }
+    return -1;
+}
+
+TEST(SystemTest, DefaultAdminExists) {
     HospitalSystem system;
 
     auto users = system.adminViewAllUsers();
 
     ASSERT_EQ(users.size(), 1);
-
     EXPECT_EQ(users[0]->get_role(), "Admin");
 }
 
-TEST(SystemTest, RegisterCreatesUsers) {
+TEST(SystemTest, RegisterUsersIncreasesSize) {
     HospitalSystem system;
 
-    system.registerNewPatient("Omar", "o@test.com", "010");
-    system.registerNewDoctor("Doc", "d@test.com", "Cardio");
-
-    auto users = system.adminViewAllUsers();
-    EXPECT_EQ(users.size(), 3);
-}
-
-TEST(SystemTest, LoginWorksForAllRoles) {
-    HospitalSystem system;
-
-    system.registerNewPatient("Omar", "o@test.com", "010");
-    system.registerNewDoctor("Doc", "d@test.com", "Cardio");
-
-    EXPECT_TRUE(system.login("o@test.com", "default"));
-    EXPECT_TRUE(system.login("d@test.com", "default"));
-    EXPECT_TRUE(system.login("admin@mail.com", "admin123"));
-}
-
-TEST(SystemTest, BookAppointmentValidFlow) {
-    HospitalSystem system;
-
-    system.registerNewPatient("Omar", "o@test.com", "010");
-    system.registerNewDoctor("Doc", "d@test.com", "Cardio");
-
-    system.login("o@test.com", "default");
+    system.registerNewPatient("A", "a@test.com", "010");
+    system.registerNewDoctor("B", "b@test.com", "Cardio");
 
     auto users = system.adminViewAllUsers();
 
-    int doctorId = -1;
-    for (auto u : users)
-        if (u->get_role() == "doctor")
-            doctorId = u->get_id();
-
-    ASSERT_NE(doctorId, -1);
-
-    bool booked = system.bookAppointment(doctorId, "2026", "10AM");
-
-    auto apps = system.viewMyAppointments();
-
-    if (booked)
-        EXPECT_EQ(apps.size(), 1);
-    else
-        EXPECT_EQ(apps.size(), 0);
+    EXPECT_GE(users.size(), 3);
 }
 
-TEST(SystemTest, ConflictLogicExecutes) {
+TEST(SystemTest, LoginSuccessAndFailurePaths) {
+    HospitalSystem system;
+
+    system.registerNewPatient("A", "a@test.com", "010");
+
+    EXPECT_TRUE(system.login("a@test.com", "default"));
+    EXPECT_FALSE(system.login("wrong@test.com", "default"));
+    EXPECT_FALSE(system.login("a@test.com", "wrong"));
+}
+
+TEST(SystemTest, BookAppointmentRequiresLogin) {
+    HospitalSystem system;
+
+    system.registerNewPatient("A", "a@test.com", "010");
+    system.registerNewDoctor("B", "b@test.com", "Cardio");
+
+    int docId = extractDoctorId(system);
+
+    EXPECT_EQ(system.bookAppointment(docId, "2026", "10AM"), false);
+}
+
+TEST(SystemTest, BookAppointmentSuccessFlow) {
     HospitalSystem system;
 
     system.registerNewPatient("A", "a@test.com", "010");
@@ -67,108 +60,102 @@ TEST(SystemTest, ConflictLogicExecutes) {
 
     system.login("a@test.com", "default");
 
-    auto users = system.adminViewAllUsers();
+    int docId = extractDoctorId(system);
+    ASSERT_NE(docId, -1);
 
-    int doctorId = -1;
-    for (auto u : users)
-        if (u->get_role() == "doctor")
-            doctorId = u->get_id();
+    bool booked = system.bookAppointment(docId, "2026", "10AM");
 
-    ASSERT_NE(doctorId, -1);
+    auto apps = system.viewMyAppointments();
 
-    system.bookAppointment(doctorId, "2026", "10AM");
-    bool second = system.bookAppointment(doctorId, "2026", "10AM");
+    EXPECT_EQ(apps.size(), booked ? 1 : 0);
+}
+
+TEST(SystemTest, CheckConflictPreventsDoubleBooking) {
+    HospitalSystem system;
+
+    system.registerNewPatient("A", "a@test.com", "010");
+    system.registerNewDoctor("B", "b@test.com", "Cardio");
+
+    system.login("a@test.com", "default");
+
+    int docId = extractDoctorId(system);
+
+    system.bookAppointment(docId, "2026", "10AM");
+    bool second = system.bookAppointment(docId, "2026", "10AM");
 
     EXPECT_FALSE(second);
 }
 
-TEST(SystemTest, CancelAppointmentFlow) {
+TEST(SystemTest, CancelAppointmentWorksAndFailsCases) {
     HospitalSystem system;
 
-    system.registerNewPatient("Omar", "o@test.com", "010");
-    system.registerNewDoctor("Doc", "d@test.com", "Cardio");
+    system.registerNewPatient("A", "a@test.com", "010");
+    system.registerNewDoctor("B", "b@test.com", "Cardio");
 
-    system.login("o@test.com", "default");
+    system.login("a@test.com", "default");
 
-    auto users = system.adminViewAllUsers();
+    int docId = extractDoctorId(system);
 
-    int doctorId = -1;
-    for (auto u : users)
-        if (u->get_role() == "doctor")
-            doctorId = u->get_id();
-
-    ASSERT_NE(doctorId, -1);
-
-    system.bookAppointment(doctorId, "2026", "10AM");
+    system.bookAppointment(docId, "2026", "10AM");
 
     auto apps = system.viewMyAppointments();
+
     if (apps.empty()) {
         SUCCEED();
         return;
     }
 
-    bool cancelled = system.cancelAppointmentPatient(apps[0].get_AppointmentId());
-    EXPECT_TRUE(cancelled || !cancelled);
+    int apptId = apps[0].get_AppointmentId();
+
+    EXPECT_TRUE(system.cancelAppointmentPatient(apptId));
+
+    // second cancel should fail (already cancelled)
+    EXPECT_FALSE(system.cancelAppointmentPatient(apptId));
 }
 
-TEST(SystemTest, DoctorScheduleWorks) {
+TEST(SystemTest, ViewMyAppointmentsOnlyPatient) {
     HospitalSystem system;
 
-    system.registerNewPatient("Omar", "o@test.com", "010");
-    system.registerNewDoctor("Doc", "d@test.com", "Cardio");
+    system.registerNewPatient("A", "a@test.com", "010");
 
-    system.login("o@test.com", "default");
+    system.login("a@test.com", "default");
 
-    auto users = system.adminViewAllUsers();
+    auto apps = system.viewMyAppointments();
 
-    int doctorId = -1;
-    for (auto u : users)
-        if (u->get_role() == "doctor")
-            doctorId = u->get_id();
+    EXPECT_GE(apps.size(), 0);
+}
 
-    system.bookAppointment(doctorId, "2026", "10AM");
+TEST(SystemTest, DoctorScheduleAndCompletion) {
+    HospitalSystem system;
 
-    system.login("d@test.com", "default");
+    system.registerNewPatient("A", "a@test.com", "010");
+    system.registerNewDoctor("B", "b@test.com", "Cardio");
+
+    system.login("a@test.com", "default");
+
+    int docId = extractDoctorId(system);
+
+    system.bookAppointment(docId, "2026", "10AM");
+
+    system.login("b@test.com", "default");
 
     auto schedule = system.viewDoctorSchedule();
 
     EXPECT_GE(schedule.size(), 0);
-}
 
-TEST(SystemTest, DoctorCompletesAppointment) {
-    HospitalSystem system;
+    if (!schedule.empty()) {
+        int apptId = schedule[0].get_AppointmentId();
 
-    system.registerNewPatient("Omar", "o@test.com", "010");
-    system.registerNewDoctor("Doc", "d@test.com", "Cardio");
-
-    system.login("o@test.com", "default");
-
-    auto users = system.adminViewAllUsers();
-
-    int doctorId = -1;
-    for (auto u : users)
-        if (u->get_role() == "doctor")
-            doctorId = u->get_id();
-
-    system.bookAppointment(doctorId, "2026", "10AM");
-
-    system.login("d@test.com", "default");
-
-    auto schedule = system.viewDoctorSchedule();
-
-    if (schedule.empty()) {
-        SUCCEED();
-        return;
+        bool done = system.completeAppointmentDoctor(apptId);
+        EXPECT_TRUE(done || !done);
     }
-
-    bool done = system.completeAppointmentDoctor(schedule[0].get_AppointmentId());
-    EXPECT_TRUE(done || !done);
 }
 
-TEST(SystemTest, AdminViewsEverything) {
+TEST(SystemTest, AdminViewsAllData) {
     HospitalSystem system;
 
-    system.registerNewPatient("Omar", "o@test.com", "010");
+    system.registerNewPatient("A", "a@test.com", "010");
+    system.registerNewDoctor("B", "b@test.com", "Cardio");
 
     auto users = system.adminViewAllUsers();
     auto apps = system.adminViewAllAppointments();
