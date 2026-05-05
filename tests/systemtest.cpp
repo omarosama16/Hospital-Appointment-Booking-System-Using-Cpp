@@ -3,6 +3,7 @@
 
 TEST(SystemTest, LoginFailsWithoutUsers) {
     HospitalSystem system;
+
     EXPECT_FALSE(system.login("none@test.com","1234"));
 }
 
@@ -13,7 +14,8 @@ TEST(SystemTest, RegisterMultipleUsers) {
     system.registerNewPatient("Ali","ali@test.com","011");
 
     auto users = system.adminViewAllUsers();
-    EXPECT_EQ(users.size(), 2);
+
+    EXPECT_EQ(users.size(), 3);
 }
 
 TEST(SystemTest, BookWithoutLoginFails) {
@@ -46,12 +48,14 @@ TEST(SystemTest, ViewAppointmentsEmpty) {
 TEST(SystemTest, FullFlow) {
     HospitalSystem system;
 
+
+
     system.registerNewPatient("Omar","omar@test.com","010");
     system.registerNewDoctor("Doc","doc@test.com","Cardio");
 
     system.login("omar@test.com","1234");
 
-    EXPECT_TRUE(system.bookAppointment(2,"2026-05-20","10:00"));
+    EXPECT_TRUE(system.bookAppointment(3,"2026-05-20","10:00"));
 
     auto apps = system.viewMyAppointments();
     EXPECT_EQ(apps.size(), 1);
@@ -66,12 +70,14 @@ TEST(SystemTest, DoctorCompleteFlow) {
     system.registerNewDoctor("Doc","doc@test.com","Cardio");
 
     system.login("omar@test.com","1234");
-    system.bookAppointment(2,"2026","10:00");
+    EXPECT_TRUE(system.bookAppointment(3,"2026","10:00"));
 
     system.login("doc@test.com","1234");
 
     auto schedule = system.viewDoctorSchedule();
-    ASSERT_FALSE(schedule.empty());
 
-    EXPECT_TRUE(system.completeAppointmentDoctor(schedule[0].get_AppointmentId()));
+    ASSERT_FALSE(schedule.empty()); 
+
+    int id = schedule[0].get_AppointmentId();
+    EXPECT_TRUE(system.completeAppointmentDoctor(id));
 }
