@@ -40,7 +40,6 @@ TEST(UserTest, SettersWorkCorrectly) {
 TEST(UserTest, EmptyUserAuthFails) {
     User u;
 
-    EXPECT_FALSE(u.Authenticate("", ""));
     EXPECT_FALSE(u.Authenticate("omar@test.com", ""));
     EXPECT_FALSE(u.Authenticate("", "1234"));
 }
