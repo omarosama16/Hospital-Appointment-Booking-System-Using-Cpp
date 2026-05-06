@@ -42,3 +42,28 @@ TEST(AdminTest, BaseUserBehaviorConsistency) {
     EXPECT_FALSE(a.Authenticate("wrong@test.com", "secure"));
     EXPECT_FALSE(a.Authenticate("admin@test.com", "wrong"));
 }
+
+TEST(AdminTest, ConstructorIsCoveredViaStackAndHeap) {
+    // Stack allocation (covers normal constructor call)
+    Admin a1(1, "StackUser", "stack@test.com", "123");
+
+    EXPECT_EQ(a1.get_role(), "Admin");
+
+    // Heap allocation (often needed for full coverage tools)
+    Admin* a2 = new Admin(2, "HeapUser", "heap@test.com", "456");
+
+    EXPECT_EQ(a2->get_id(), 2);
+    EXPECT_EQ(a2->get_name(), "HeapUser");
+    EXPECT_EQ(a2->get_role(), "Admin");
+
+    delete a2; // ensures destructor path (from User) is also hit safely
+}
+
+TEST(AdminTest, PolymorphismCoversBasePointerConstruction) {
+    User* user = new Admin(3, "PolyUser", "poly@test.com", "789");
+
+    EXPECT_EQ(user->get_role(), "Admin");
+    EXPECT_TRUE(user->Authenticate("poly@test.com", "789"));
+
+    delete user;
+}
