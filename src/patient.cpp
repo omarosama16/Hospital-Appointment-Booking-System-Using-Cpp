@@ -1,4 +1,4 @@
-#include "patient.h"
+#include "Patient.h"
 
 Patient::Patient(int i, string n, string e, string p, string ph)
     : User(i, n, e, p, "patient"), phone(ph) {}

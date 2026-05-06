@@ -1,4 +1,4 @@
-#include "doctor.h"
+#include "Doctor.h"
 
 Doctor::Doctor(int i, string n, string e, string p, string s)
     : User(i, n, e, p, "doctor"), specialization(s) {}

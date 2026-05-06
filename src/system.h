@@ -1,9 +1,9 @@
-#ifndef HOSPITAL_SYSTEM_H
-#define HOSPITAL_SYSTEM_H
+#ifndef SYSTEM_H
+#define SYSTEM_H
 
 #include "user.h"
-#include "appointment.h"
-#include "doctor.h"
+#include "Appointment.h"
+#include "Doctor.h"
 #include <vector>
 
 class HospitalSystem

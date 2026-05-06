@@ -1,4 +1,4 @@
-#include "appointment.h"
+#include "Appointment.h"
 #include <iostream>
 #include <iomanip>
 

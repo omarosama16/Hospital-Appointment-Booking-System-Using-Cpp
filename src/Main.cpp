@@ -5,7 +5,7 @@
 #include <limits>
 #include "system.h"
 #include "user.h"
-#include "appointment.h"
+#include "Appointment.h"
 
 using namespace std;
 
@@ -41,7 +41,6 @@ void printApptHeader()
     printLine(79, '-');
 }
 
-// helper: get role directly from logged user (FIXED APPROACH)
 string getRole(User *u)
 {
     if (!u)

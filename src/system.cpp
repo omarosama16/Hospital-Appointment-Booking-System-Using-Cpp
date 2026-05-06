@@ -1,6 +1,6 @@
 #include "system.h"
-#include "doctor.h"
-#include "patient.h"
+#include "Doctor.h"
+#include "Patient.h"
 #include "admin.h"
 
 HospitalSystem::HospitalSystem()
