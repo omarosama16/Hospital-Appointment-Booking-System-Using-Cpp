@@ -67,3 +67,18 @@ TEST(AdminTest, PolymorphismCoversBasePointerConstruction) {
 
     delete user;
 }
+TEST(AdminTest, AuthenticateFullBranchCoverage) {
+    Admin a(1, "Omar", "omar@test.com", "1234");
+
+    // true && true
+    EXPECT_TRUE(a.Authenticate("omar@test.com", "1234"));
+
+    // true && false
+    EXPECT_FALSE(a.Authenticate("omar@test.com", "wrong"));
+
+    // false && true
+    EXPECT_FALSE(a.Authenticate("wrong@test.com", "1234"));
+
+    // false && false  👈 THIS is what you're missing
+    EXPECT_FALSE(a.Authenticate("wrong@test.com", "wrong"));
+}
