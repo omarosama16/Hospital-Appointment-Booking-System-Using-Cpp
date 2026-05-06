@@ -5,7 +5,7 @@
 #include <limits>
 #include "system.h"
 #include "user.h"
-#include "Appointment.h"
+#include "appointment.h"
 
 using namespace std;
 
@@ -41,25 +41,28 @@ void printApptHeader()
     printLine(79, '-');
 }
 
-string getRoleByEmail(HospitalSystem &sys, const string &email)
+// helper: get role directly from logged user (FIXED APPROACH)
+string getRole(User *u)
 {
-    vector<User *> users = sys.adminViewAllUsers();
-    for (auto u : users)
-        if (u->get_email() == email)
-            return u->get_role();
-    return "";
+    if (!u)
+        return "";
+    return u->get_role();
 }
+
 void listDoctors(HospitalSystem &sys)
 {
     vector<User *> users = sys.adminViewAllUsers();
+
     cout << "\n"
          << left
          << setw(6) << "ID"
          << setw(25) << "Doctor Name"
          << "Specialization\n";
+
     printLine(55, '-');
 
     bool found = false;
+
     for (auto u : users)
     {
         if (u->get_role() == "doctor")
@@ -70,13 +73,16 @@ void listDoctors(HospitalSystem &sys)
             found = true;
         }
     }
+
     if (!found)
         cout << "  No doctors registered yet.\n";
 }
 
+/* ================= PATIENT ================= */
 void patientMenu(HospitalSystem &sys)
 {
     int choice;
+
     do
     {
         printHeader("PATIENT MENU");
@@ -85,6 +91,7 @@ void patientMenu(HospitalSystem &sys)
         cout << "  3. Cancel an appointment\n";
         cout << "  0. Logout\n";
         printLine();
+
         cout << "  Choice: ";
         cin >> choice;
         cin.ignore();
@@ -92,296 +99,338 @@ void patientMenu(HospitalSystem &sys)
         if (choice == 1)
         {
             printHeader("MY APPOINTMENTS");
-            vector<Appointment> appts = sys.viewMyAppointments();
+
+            auto appts = sys.viewMyAppointments();
+
             if (appts.empty())
-                cout << "  You have no appointments.\n";
+                cout << "  No appointments found.\n";
             else
             {
                 printApptHeader();
                 for (auto &a : appts)
                     a.print_row();
             }
+
             pause();
         }
 
-
         else if (choice == 2)
         {
-            printHeader("BOOK AN APPOINTMENT");
+            printHeader("BOOK APPOINTMENT");
+
             listDoctors(sys);
 
             int docId;
             string date, time;
-            cout << "\n  Enter Doctor ID  : ";
+
+            cout << "\n  Doctor ID: ";
             cin >> docId;
             cin.ignore();
-            cout << "  Enter Date       : (e.g. 2025-06-01) : ";
+
+            cout << "  Date (YYYY-MM-DD): ";
             getline(cin, date);
-            cout << "  Enter Time slot  : (e.g. 10AM)       : ";
+
+            cout << "  Time: ";
             getline(cin, time);
 
             if (sys.bookAppointment(docId, date, time))
-                cout << "\n  Appointment booked successfully!\n";
+                cout << "\n  Booked successfully!\n";
             else
-                cout << "\n  Booking failed.\n"
-                     << "  The slot may already be taken or the doctor ID is invalid.\n";
+                cout << "\n  Booking failed.\n";
+
             pause();
         }
 
-
         else if (choice == 3)
         {
-            printHeader("CANCEL AN APPOINTMENT");
-            vector<Appointment> appts = sys.viewMyAppointments();
+            printHeader("CANCEL APPOINTMENT");
+
+            auto appts = sys.viewMyAppointments();
+
             if (appts.empty())
             {
-                cout << "  You have no appointments to cancel.\n";
+                cout << "  No appointments to cancel.\n";
                 pause();
                 continue;
             }
+
             printApptHeader();
             for (auto &a : appts)
                 a.print_row();
 
             int id;
-            cout << "\n  Enter Appointment ID to cancel: ";
+            cout << "\n  Enter Appointment ID: ";
             cin >> id;
             cin.ignore();
 
             if (sys.cancelAppointmentPatient(id))
-                cout << "  Appointment cancelled successfully.\n";
+                cout << "  Cancelled successfully.\n";
             else
-                cout << "  Cancellation failed.\n"
-                     << "  Check the ID or the appointment may already be cancelled/completed.\n";
+                cout << "  Cancel failed.\n";
+
             pause();
         }
 
     } while (choice != 0);
 }
 
-
+/* ================= DOCTOR ================= */
 void doctorMenu(HospitalSystem &sys)
 {
     int choice;
+
     do
     {
         printHeader("DOCTOR MENU");
-        cout << "  1. View my schedule\n";
-        cout << "  2. Mark appointment as Completed\n";
+        cout << "  1. View schedule\n";
+        cout << "  2. Complete appointment\n";
         cout << "  0. Logout\n";
         printLine();
+
         cout << "  Choice: ";
         cin >> choice;
         cin.ignore();
 
-        // ── 1. View schedule ──────────────────────
         if (choice == 1)
         {
             printHeader("MY SCHEDULE");
-            vector<Appointment> appts = sys.viewDoctorSchedule();
+
+            auto appts = sys.viewDoctorSchedule();
+
             if (appts.empty())
-                cout << "  No appointments in your schedule.\n";
+                cout << "  No appointments.\n";
             else
             {
                 printApptHeader();
                 for (auto &a : appts)
                     a.print_row();
             }
+
             pause();
         }
 
         else if (choice == 2)
         {
-            printHeader("MARK APPOINTMENT AS COMPLETED");
-            vector<Appointment> appts = sys.viewDoctorSchedule();
+            printHeader("COMPLETE APPOINTMENT");
+
+            auto appts = sys.viewDoctorSchedule();
+
             if (appts.empty())
             {
-                cout << "  No appointments in your schedule.\n";
+                cout << "  No appointments.\n";
                 pause();
                 continue;
             }
+
             printApptHeader();
             for (auto &a : appts)
                 a.print_row();
 
             int id;
-            cout << "\n  Enter Appointment ID to complete: ";
+            cout << "\n  Appointment ID: ";
             cin >> id;
             cin.ignore();
 
             if (sys.completeAppointmentDoctor(id))
-                cout << "  Appointment marked as Completed.\n";
+                cout << "  Completed successfully.\n";
             else
-                cout << "  Failed. Check the ID or appointment may not be Scheduled.\n";
+                cout << "  Failed.\n";
+
             pause();
         }
 
     } while (choice != 0);
 }
 
+/* ================= ADMIN ================= */
 void adminMenu(HospitalSystem &sys)
 {
     int choice;
+
     do
     {
         printHeader("ADMIN MENU");
-        cout << "  1. View all users\n";
-        cout << "  2. View all appointments\n";
-        cout << "  3. Register a new doctor\n";
-        cout << "  4. Register a new patient\n";
+        cout << "  1. View users\n";
+        cout << "  2. View appointments\n";
+        cout << "  3. Add doctor\n";
+        cout << "  4. Add patient\n";
         cout << "  0. Logout\n";
         printLine();
+
         cout << "  Choice: ";
         cin >> choice;
         cin.ignore();
 
-        // ── 1. View all users ─────────────────────
         if (choice == 1)
         {
-            printHeader("ALL USERS");
-            vector<User *> users = sys.adminViewAllUsers();
+            printHeader("USERS");
+
+            auto users = sys.adminViewAllUsers();
+
             cout << left
                  << setw(5) << "ID"
-                 << setw(25) << "Name"
-                 << setw(30) << "Email"
+                 << setw(20) << "Name"
+                 << setw(25) << "Email"
                  << "Role\n";
+
             printLine(70, '-');
+
             for (auto u : users)
                 cout << setw(5) << u->get_id()
-                     << setw(25) << u->get_name()
-                     << setw(30) << u->get_email()
+                     << setw(20) << u->get_name()
+                     << setw(25) << u->get_email()
                      << u->get_role() << "\n";
+
             pause();
         }
 
-
         else if (choice == 2)
         {
-            printHeader("ALL APPOINTMENTS");
-            vector<Appointment> appts = sys.adminViewAllAppointments();
+            printHeader("APPOINTMENTS");
+
+            auto appts = sys.adminViewAllAppointments();
+
             if (appts.empty())
-                cout << "  No appointments in the system yet.\n";
+                cout << "  No appointments.\n";
             else
             {
                 printApptHeader();
                 for (auto &a : appts)
                     a.print_row();
             }
+
             pause();
         }
 
         else if (choice == 3)
         {
-            printHeader("REGISTER NEW DOCTOR");
-            string name, email, spec;
-            cout << "  Name           : ";
+            printHeader("ADD DOCTOR");
+
+            string name, email, pass, spec;
+
+            cout << " Name: ";
             getline(cin, name);
-            cout << "  Email          : ";
+
+            cout << " Email: ";
             getline(cin, email);
-            cout << "  Specialization : ";
+
+            cout << " Password: ";
+            getline(cin, pass);
+
+            cout << " Specialization: ";
             getline(cin, spec);
 
-            sys.registerNewDoctor(name, email, spec);
-            cout << "\n  Doctor registered successfully!\n"
-                 << "  Default password: default\n";
+            sys.registerNewDoctor(name, email, pass, spec);
+
+            cout << "\n  Doctor added.\n";
             pause();
         }
 
         else if (choice == 4)
         {
-            printHeader("REGISTER NEW PATIENT");
-            string name, email, phone;
-            cout << "  Name  : ";
+            printHeader("ADD PATIENT");
+
+            string name, email, pass, phone;
+
+            cout << " Name: ";
             getline(cin, name);
-            cout << "  Email : ";
+
+            cout << " Email: ";
             getline(cin, email);
-            cout << "  Phone : ";
+
+            cout << " Password: ";
+            getline(cin, pass);
+
+            cout << " Phone: ";
             getline(cin, phone);
 
-            sys.registerNewPatient(name, email, phone);
-            cout << "\n  Patient registered successfully!\n"
-                 << "  Default password: default\n";
+            sys.registerNewPatient(name, email, pass, phone);
+
+            cout << "\n  Patient added.\n";
             pause();
         }
 
     } while (choice != 0);
 }
 
-
+/* ================= MAIN ================= */
 int main()
 {
     HospitalSystem sys;
     int choice;
 
-    cout << "\n";
-    printLine(55, '*');
-    cout << "   HOSPITAL APPOINTMENT BOOKING SYSTEM\n";
-    cout << "   Cairo University\n";
-    printLine(55, '*');
-    cout << "\n  Default Admin  ->  admin@mail.com  /  admin123\n";
+    cout << "\n===== HOSPITAL SYSTEM =====\n";
+    cout << "Admin: admin@mail.com / admin123\n";
 
     do
     {
         printHeader("MAIN MENU");
         cout << "  1. Login\n";
-        cout << "  2. Register as Patient\n";
+        cout << "  2. Register Patient\n";
         cout << "  0. Exit\n";
         printLine();
-        cout << "  Choice: ";
+
+        cout << " Choice: ";
         cin >> choice;
         cin.ignore();
 
-
         if (choice == 1)
         {
+            string email, pass;
+
             printHeader("LOGIN");
-            string email, password;
-            cout << "  Email    : ";
+
+            cout << " Email: ";
             getline(cin, email);
-            cout << "  Password : ";
-            getline(cin, password);
 
-            if (sys.login(email, password))
+            cout << " Password: ";
+            getline(cin, pass);
+
+            if (sys.login(email, pass))
             {
-                string role = getRoleByEmail(sys, email);
-                cout << "\n  Login successful!  Role: " << role << "\n";
+                string role = getRole(sys.getCurrentUser()); // FIXED IDEA BELOW
 
-                if (role == "Patient")
+                cout << "\n Logged in as: " << role << "\n";
+
+                if (role == "patient")
                     patientMenu(sys);
                 else if (role == "doctor")
                     doctorMenu(sys);
-                else if (role == "Admin")
+                else if (role == "admin")
                     adminMenu(sys);
-                else
-                    cout << "  Unknown role. Logging out.\n";
             }
             else
             {
-                cout << "\n  Invalid email or password.\n";
+                cout << "\n Login failed.\n";
                 pause();
             }
         }
 
         else if (choice == 2)
         {
-            printHeader("PATIENT SELF-REGISTRATION");
-            string name, email, phone;
-            cout << "  Name  : ";
+            string name, email, pass, phone;
+
+            printHeader("REGISTER");
+
+            cout << " Name: ";
             getline(cin, name);
-            cout << "  Email : ";
+
+            cout << " Email: ";
             getline(cin, email);
-            cout << "  Phone : ";
+
+            cout << " Password: ";
+            getline(cin, pass);
+
+            cout << " Phone: ";
             getline(cin, phone);
 
-            sys.registerNewPatient(name, email, phone);
-            cout << "\n  Registration successful!\n"
-                 << "  You can now login with your email.\n"
-                 << "  Default password: default\n";
+            sys.registerNewPatient(name, email, pass, phone);
+
+            cout << "\n Registered successfully.\n";
             pause();
         }
 
     } while (choice != 0);
 
-    cout << "\n  Thank you for using the Hospital Booking System. Goodbye!\n\n";
-    return 0;
+    cout << "\n Goodbye!\n";
 }

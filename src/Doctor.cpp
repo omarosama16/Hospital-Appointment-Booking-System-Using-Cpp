@@ -1,17 +1,17 @@
-#include "Doctor.h"
-#include <iostream>
+#include "doctor.h"
 
-using namespace std;
+Doctor::Doctor(int i, string n, string e, string p, string s)
+    : User(i, n, e, p, "doctor"), specialization(s) {}
 
-Doctor::Doctor(int id, string n, string e, string p, string s)
-    : User(id, n, e, p, "doctor")
+string Doctor::getSpecialization() const
 {
-    specialization = s;
+    return specialization;
 }
 
-string Doctor::getSpecialization() const { return specialization; }
-
-vector<string> Doctor::getAvailability() const { return availability; }
+vector<string> Doctor::getAvailability() const
+{
+    return availability;
+}
 
 void Doctor::addAvailability(string time)
 {

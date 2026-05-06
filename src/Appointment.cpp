@@ -1,21 +1,18 @@
+#include "appointment.h"
 #include <iostream>
-#include "Appointment.h"
-#include <string>
 #include <iomanip>
+
 using namespace std;
+
 Appointment::Appointment()
 {
-    appointmentid = 0;
-    patientid = 0;
-    doctorid = 0;
-    patientname = "";
-    doctorname = "";
-    date = "";
-    time = "";
-    status = "";
+    appointmentid = patientid = doctorid = 0;
+    patientname = doctorname = date = time = status = "";
 }
+
 Appointment::Appointment(int a, int p, int d, string pa, string doc, string da, string t, string s)
-    : appointmentid(a), patientid(p), doctorid(d), patientname(pa), doctorname(doc),
+    : appointmentid(a), patientid(p), doctorid(d),
+      patientname(pa), doctorname(doc),
       date(da), time(t), status(s) {}
 
 int Appointment::get_AppointmentId() const { return appointmentid; }
@@ -27,16 +24,20 @@ string Appointment::get_Status() const { return status; }
 
 void Appointment::cancel()
 {
-    status = "Cancelled";
+    if (status == "Scheduled")
+        status = "Cancelled";
 }
+
 void Appointment::complete()
 {
-    status = "Completed";
+    if (status == "Scheduled")
+        status = "Completed";
 }
 
 void Appointment::print_row() const
 {
-    cout << left << setw(5) << appointmentid
+    cout << left
+         << setw(5) << appointmentid
          << setw(20) << patientname
          << setw(20) << doctorname
          << setw(12) << date
