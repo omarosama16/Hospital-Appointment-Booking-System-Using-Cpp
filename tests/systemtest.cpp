@@ -18,14 +18,13 @@ static int getDoctorId(HospitalSystem& system)
 
     for (auto u : users)
     {
-        if (u != nullptr && u->getRole() == "doctor")
+        if (u != nullptr && u->get_role() == "doctor")
         {
-            return u->getId();
+            return u->get_id();
         }
     }
     return -1;
 }
-
 // -------------------- BASIC AUTH TESTS --------------------
 
 TEST(HospitalSystemTest, Login_Success_And_Failure)
@@ -165,8 +164,7 @@ TEST(HospitalSystemTest, DoctorSchedule_And_Complete_Success)
     auto schedule = system.viewDoctorSchedule();
     ASSERT_EQ(schedule.size(), 1);
 
-    // FIX: NO HARD CODED ID (prevents hidden crash)
-    int appointmentId = schedule[0].getId();
+    int appointmentId = schedule[0].get_id();
 
     EXPECT_TRUE(system.completeAppointmentDoctor(appointmentId));
 }
