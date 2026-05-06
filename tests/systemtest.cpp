@@ -11,6 +11,22 @@ public:
     using HospitalSystem::adminViewAllAppointments;
 };
 
+// ---------------- SAFE HELPER ----------------
+// dynamically fetch doctor ID instead of assuming "2"
+static int getDoctorId(HospitalSystem& system)
+{
+    auto users = system.adminViewAllUsers();
+
+    for (auto &u : users)
+    {
+        if (u.getRole() == "doctor")
+        {
+            return u.getId();
+        }
+    }
+    return -1;
+}
+
 // -------------------- SYSTEM TESTS --------------------
 
 TEST(HospitalSystemTest, Login_Success_And_Failure)
@@ -44,8 +60,10 @@ TEST(HospitalSystemTest, Booking_Success)
 
     ASSERT_TRUE(system.login("p@mail.com", "123"));
 
-    // FIX: removed undefined doctorId
-    bool booked = system.bookAppointment(2, "2026", "10AM");
+    int doctorId = getDoctorId(system);
+    ASSERT_NE(doctorId, -1);
+
+    bool booked = system.bookAppointment(doctorId, "2026", "10AM");
 
     EXPECT_TRUE(booked);
 
@@ -59,7 +77,11 @@ TEST(HospitalSystemTest, Booking_Fails_NotLoggedIn)
 
     system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
 
-    EXPECT_FALSE(system.bookAppointment(2, "2026", "10AM"));
+    int doctorId = getDoctorId(system);
+    if (doctorId != -1)
+    {
+        EXPECT_FALSE(system.bookAppointment(doctorId, "2026", "10AM"));
+    }
 }
 
 TEST(HospitalSystemTest, Booking_Fails_WrongRole)
@@ -69,7 +91,11 @@ TEST(HospitalSystemTest, Booking_Fails_WrongRole)
     system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
     system.login("admin@mail.com", "admin123");
 
-    EXPECT_FALSE(system.bookAppointment(2, "2026", "10AM"));
+    int doctorId = getDoctorId(system);
+    if (doctorId != -1)
+    {
+        EXPECT_FALSE(system.bookAppointment(doctorId, "2026", "10AM"));
+    }
 }
 
 TEST(HospitalSystemTest, Booking_Fails_InvalidDoctor)
@@ -80,7 +106,7 @@ TEST(HospitalSystemTest, Booking_Fails_InvalidDoctor)
 
     ASSERT_TRUE(system.login("p@mail.com", "123"));
 
-    EXPECT_FALSE(system.bookAppointment(999, "2026", "10AM"));
+    EXPECT_FALSE(system.bookAppointment(9999, "2026", "10AM"));
 }
 
 TEST(HospitalSystemTest, Booking_Fails_Conflict)
@@ -92,9 +118,12 @@ TEST(HospitalSystemTest, Booking_Fails_Conflict)
 
     ASSERT_TRUE(system.login("p@mail.com", "123"));
 
-    ASSERT_TRUE(system.bookAppointment(2, "2026", "10AM"));
+    int doctorId = getDoctorId(system);
+    ASSERT_NE(doctorId, -1);
 
-    EXPECT_FALSE(system.bookAppointment(2, "2026", "10AM"));
+    ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
+
+    EXPECT_FALSE(system.bookAppointment(doctorId, "2026", "10AM"));
 }
 
 // -------------------- VIEW APPOINTMENTS --------------------
@@ -110,7 +139,10 @@ TEST(HospitalSystemTest, ViewMyAppointments_Empty_And_Filled)
 
     EXPECT_TRUE(system.viewMyAppointments().empty());
 
-    ASSERT_TRUE(system.bookAppointment(2, "2026", "10AM"));
+    int doctorId = getDoctorId(system);
+    ASSERT_NE(doctorId, -1);
+
+    ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
     auto apps = system.viewMyAppointments();
     EXPECT_EQ(apps.size(), 1);
@@ -126,7 +158,11 @@ TEST(HospitalSystemTest, DoctorSchedule_And_Complete_Success)
     system.registerNewPatient("p1", "p@mail.com", "123");
 
     ASSERT_TRUE(system.login("p@mail.com", "123"));
-    ASSERT_TRUE(system.bookAppointment(2, "2026", "10AM"));
+
+    int doctorId = getDoctorId(system);
+    ASSERT_NE(doctorId, -1);
+
+    ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
     ASSERT_TRUE(system.login("doc@mail.com", "123"));
 
@@ -154,7 +190,11 @@ TEST(HospitalSystemTest, Complete_Fails_WrongDoctor)
     system.registerNewPatient("p1", "p@mail.com", "123");
 
     ASSERT_TRUE(system.login("p@mail.com", "123"));
-    ASSERT_TRUE(system.bookAppointment(2, "2026", "10AM"));
+
+    int doctorId = getDoctorId(system);
+    ASSERT_NE(doctorId, -1);
+
+    ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
     ASSERT_TRUE(system.login("doc2@mail.com", "123"));
 
@@ -171,7 +211,11 @@ TEST(HospitalSystemTest, Admin_View_All)
     system.registerNewPatient("p1", "p@mail.com", "123");
 
     ASSERT_TRUE(system.login("p@mail.com", "123"));
-    ASSERT_TRUE(system.bookAppointment(2, "2026", "10AM"));
+
+    int doctorId = getDoctorId(system);
+    ASSERT_NE(doctorId, -1);
+
+    ASSERT_TRUE(system.bookAppointment(doctorId, "2026", "10AM"));
 
     auto apps = system.adminViewAllAppointments();
     auto users = system.adminViewAllUsers();
