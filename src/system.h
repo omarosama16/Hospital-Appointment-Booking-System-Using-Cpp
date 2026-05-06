@@ -9,8 +9,8 @@
 class HospitalSystem
 {
 private:
-    vector<User *> allUsers;
-    vector<Appointment> masterSchedule;
+    std::vector<User *> allUsers;
+    std::vector<Appointment> masterSchedule;
     User *currentUser;
 
     int nextUserId;
@@ -19,25 +19,26 @@ private:
     Doctor *findDoctorById(int docId);
 
 public:
-    User *getCurrentUser() const;
     HospitalSystem();
     ~HospitalSystem();
 
-    bool login(string e, string password);
+    User *getCurrentUser() const;
 
-    void registerNewPatient(string name, string email, string password, string phone);
-    void registerNewDoctor(string name, string email, string password, string specialization);
+    bool login(std::string e, std::string password);
 
-    bool bookAppointment(int docid, string date, string time);
+    void registerNewPatient(std::string name, std::string email, std::string password, std::string phone);
+    void registerNewDoctor(std::string name, std::string email, std::string password, std::string specialization);
+
+    bool bookAppointment(int docid, std::string date, std::string time);
     bool cancelAppointmentPatient(int appid);
 
-    vector<Appointment> viewMyAppointments();
-    vector<Appointment> viewDoctorSchedule();
+    std::vector<Appointment> viewMyAppointments();
+    std::vector<Appointment> viewDoctorSchedule();
 
     bool completeAppointmentDoctor(int apptId);
 
-    vector<Appointment> adminViewAllAppointments();
-    vector<User *> adminViewAllUsers();
+    std::vector<Appointment> adminViewAllAppointments();
+    std::vector<User *> adminViewAllUsers();
 };
 
 #endif

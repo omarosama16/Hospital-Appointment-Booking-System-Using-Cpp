@@ -6,7 +6,7 @@
 class Admin : public User
 {
 public:
-    Admin(int id, string name, string email, string password);
+    Admin(int id, std::string name, std::string email, std::string password);
 };
 
 #endif

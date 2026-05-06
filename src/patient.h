@@ -6,15 +6,13 @@
 class Patient : public User
 {
 private:
-    string phone;
+    std::string phone;
 
 public:
-    Patient(int id, string name, string email, string password, string phone);
+    Patient(int id, std::string name, std::string email, std::string password, std::string phone);
 
-    void set_phone(string p);
-    string get_phone() const;
-
-    ~Patient() {}
+    void set_phone(std::string p);
+    std::string get_phone() const;
 };
 
 #endif

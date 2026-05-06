@@ -7,17 +7,17 @@
 class Doctor : public User
 {
 private:
-    string specialization;
-    vector<string> availability;
+    std::string specialization;
+    std::vector<std::string> availability;
 
 public:
-    Doctor(int id, string name, string email, string password, string specialization);
+    Doctor(int id, std::string name, std::string email, std::string password, std::string specialization);
 
-    string getSpecialization() const;
+    std::string getSpecialization() const;
 
-    vector<string> getAvailability() const;
+    std::vector<std::string> getAvailability() const;
 
-    void addAvailability(string time);
+    void addAvailability(std::string time);
     void clearAvailability();
 };
 

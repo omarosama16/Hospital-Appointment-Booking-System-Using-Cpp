@@ -9,22 +9,22 @@ User::User()
     role = "";
 }
 
-User::User(int i, string n, string e, string p, string r)
+User::User(int i, std::string n, std::string e, std::string p, std::string r)
     : id(i), name(n), email(e), password(p), role(r) {}
 
 void User::set_id(int i) { id = i; }
-void User::set_name(string n) { name = n; }
-void User::set_password(string p) { password = p; }
-void User::set_role(string r) { role = r; }
-void User::set_email(string e) { email = e; }
+void User::set_name(std::string n) { name = n; }
+void User::set_password(std::string p) { password = p; }
+void User::set_role(std::string r) { role = r; }
+void User::set_email(std::string e) { email = e; }
 
 int User::get_id() const { return id; }
-string User::get_name() const { return name; }
-string User::get_email() const { return email; }
-string User::get_password() const { return password; }
-string User::get_role() const { return role; }
+std::string User::get_name() const { return name; }
+std::string User::get_email() const { return email; }
+std::string User::get_password() const { return password; }
+std::string User::get_role() const { return role; }
 
-bool User::Authenticate(string e, string p)
+bool User::Authenticate(std::string e, std::string p)
 {
-    return (email == e && password == p);
+    return email == e && password == p;
 }
