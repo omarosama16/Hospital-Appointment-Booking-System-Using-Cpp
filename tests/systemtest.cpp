@@ -13,22 +13,21 @@ public:
 
 // -------------------- SYSTEM TESTS --------------------
 
-TEST(HospitalSystemTest, Login_AllBranches)
+TEST(HospitalSystemTest,Login_Success_And_Failure)
 {
     HospitalSystem system;
 
-    // default admin exists
-    bool adminLogin = system.login("admin@mail.com", "admin123");
-
-    EXPECT_TRUE(adminLogin);
+    // right login path
+    EXPECT_TRUE(system.login("admin@mail.com", "admin123"));
 
     // wrong login path
-    EXPECT_FALSE(system.login("wrong@mail.com", "wrong"));
+     EXPECT_FALSE(system.login("wrong@mail.com", "wrong"));
 }
 
-TEST(HospitalSystemTest, AdminAndUserCreation)
+TEST(HospitalSystemTest,Create_Doctor_And_Patient)
 {
-    HospitalSystem system;
+    
+    TestUserSystem system;
 
     system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
     system.registerNewPatient("p1", "p@mail.com", "123");
@@ -39,95 +38,150 @@ TEST(HospitalSystemTest, AdminAndUserCreation)
     EXPECT_GE(users.size(), 3);
 }
 
-TEST(HospitalSystemTest, Booking_FullFlow)
+TEST(HospitalSystemTest, Booking_Success)
 {
     HospitalSystem system;
 
     system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
     system.registerNewPatient("p1", "p@mail.com", "123");
 
-    // login patient (IMPORTANT)
-    system.login("p@mail.com", "default");
-
-    // doctor id will be 2 (admin=1, doctor=2)
-    int doctorId = 2;
+    ASSERT_TRUE(system.login("p@mail.com", "default"));
 
     // ⚠️ IMPORTANT: current system logic likely prevents booking due to role mismatch
     bool booked = system.bookAppointment(doctorId, "2026", "10AM");
 
-    // we ASSERT ACTUAL BEHAVIOR (not expected ideal behavior)
-    EXPECT_FALSE(booked);
+    EXPECT_TRUE(booked);
 
     auto apps = system.viewMyAppointments();
-    EXPECT_TRUE(apps.empty());
+     EXPECT_EQ(apps.size(), 1);
+}
+// -------------------- BOOKING FAILURES --------------------
+TEST(HospitalSystemTest,Booking_Fails_NotLoggedIn)
+{
+    HospitalSystem system;
+
+    system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
+     EXPECT_FALSE(system.bookAppointment(2, "2026", "10AM"));
 }
 
-TEST(HospitalSystemTest, CancelFlow_AllBranches)
+TEST(HospitalSystemTest, Booking_Fails_WrongRole)
+{
+    HospitalSystem system;
+
+    system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
+    system.login("admin@mail.com", "admin123");
+
+     EXPECT_FALSE(system.bookAppointment(2, "2026", "10AM"));
+}
+
+TEST(HospitalSystemTest, Booking_Fails_InvalidDoctor)
+{
+    HospitalSystem system;
+
+   system.registerNewPatient("p1", "p@mail.com", "123");
+
+    ASSERT_TRUE(system.login("p@mail.com", "default"));
+
+    EXPECT_FALSE(system.bookAppointment(999, "2026", "10AM"));
+}
+
+TEST(HospitalSystemTest,Booking_Fails_Conflict)
+{
+    HospitalSystem system;
+
+   system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
+    system.registerNewPatient("p1", "p@mail.com", "123");
+
+    ASSERT_TRUE(system.login("p@mail.com", "default"));
+
+    ASSERT_TRUE(system.bookAppointment(2, "2026", "10AM"));
+
+    // same slot again → should fail
+    EXPECT_FALSE(system.bookAppointment(2, "2026", "10AM"));
+}
+// -------------------- VIEW APPOINTMENTS --------------------
+
+TEST(HospitalSystemTest, ViewMyAppointments_Empty_And_Filled)
 {
     HospitalSystem system;
 
     system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
     system.registerNewPatient("p1", "p@mail.com", "123");
 
-    system.login("p@mail.com", "default");
+    ASSERT_TRUE(system.login("p@mail.com", "default"));
 
-    int doctorId = 2;
+    // empty first
+    EXPECT_TRUE(system.viewMyAppointments().empty());
 
-    // booking likely fails -> cancel should also fail safely
-    system.bookAppointment(doctorId, "2026", "10AM");
-
-    bool cancelled = system.cancelAppointmentPatient(1);
-
-    EXPECT_FALSE(cancelled);
-}
-
-TEST(HospitalSystemTest, ViewMyAppointments_Branches)
-{
-    HospitalSystem system;
-
-    system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
-    system.registerNewPatient("p1", "p@mail.com", "123");
-
-    system.login("p@mail.com", "default");
-
-    int doctorId = 2;
-
-    system.bookAppointment(doctorId, "2026", "10AM");
+    ASSERT_TRUE(system.bookAppointment(2, "2026", "10AM"));
 
     auto apps = system.viewMyAppointments();
-
-    // booking likely fails → list stays empty
-    EXPECT_TRUE(apps.empty());
+    EXPECT_EQ(apps.size(), 1);
 }
 
-TEST(HospitalSystemTest, DoctorSchedule_And_Complete)
+// -------------------- DOCTOR TESTS --------------------
+
+TEST(HospitalSystemTest, DoctorSchedule_And_Complete_Success)
 {
     HospitalSystem system;
 
     system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
     system.registerNewPatient("p1", "p@mail.com", "123");
 
-    system.login("doc@mail.com", "default");
+    // patient books
+    ASSERT_TRUE(system.login("p@mail.com", "default"));
+    ASSERT_TRUE(system.bookAppointment(2, "2026", "10AM"));
+
+    // doctor logs in
+    ASSERT_TRUE(system.login("doc@mail.com", "default"));
 
     auto schedule = system.viewDoctorSchedule();
+    EXPECT_EQ(schedule.size(), 1);
 
-    // doctor has no real appointments in current system state
-    EXPECT_TRUE(schedule.empty());
-
-    bool completed = system.completeAppointmentDoctor(1);
-    EXPECT_FALSE(completed);
+    EXPECT_TRUE(system.completeAppointmentDoctor(1));
 }
 
-TEST(HospitalSystemTest, AdminViewAll)
+TEST(HospitalSystemTest, DoctorSchedule_Fails_NotDoctor)
+{
+    HospitalSystem system;
+
+    system.login("admin@mail.com", "admin123");
+
+    EXPECT_TRUE(system.viewDoctorSchedule().empty());
+}
+
+TEST(HospitalSystemTest, Complete_Fails_WrongDoctor)
 {
     HospitalSystem system;
 
     system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
+    system.registerNewDoctor("doc2", "doc2@mail.com", "cardio");
     system.registerNewPatient("p1", "p@mail.com", "123");
+
+    ASSERT_TRUE(system.login("p@mail.com", "default"));
+    ASSERT_TRUE(system.bookAppointment(2, "2026", "10AM"));
+
+    // different doctor
+    ASSERT_TRUE(system.login("doc2@mail.com", "default"));
+
+    EXPECT_FALSE(system.completeAppointmentDoctor(1));
+}
+
+// -------------------- ADMIN TESTS --------------------
+
+TEST(HospitalSystemTest, Admin_View_All)
+{
+    TestUserSystem system;
+
+    system.registerNewDoctor("doc1", "doc@mail.com", "cardio");
+    system.registerNewPatient("p1", "p@mail.com", "123");
+
+    ASSERT_TRUE(system.login("p@mail.com", "default"));
+    ASSERT_TRUE(system.bookAppointment(2, "2026", "10AM"));
 
     auto apps = system.adminViewAllAppointments();
     auto users = system.adminViewAllUsers();
 
-    EXPECT_TRUE(apps.empty() || apps.size() >= 0);
-    EXPECT_GE(users.size(), 1);
+    EXPECT_EQ(apps.size(), 1);
+    EXPECT_GE(users.size(), 3);
 }
