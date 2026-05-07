@@ -1,4 +1,4 @@
-name: C++ Full CI Pipeline
+name: C++ CI Pipeline
 
 on:
   push:
@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       # ================= CHECKOUT =================
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,45 +19,33 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y \
-            cmake \
-            g++ \
-            gcovr \
-            lcov \
-            libgtest-dev
+          sudo apt install -y cmake g++ gcovr lcov libgtest-dev
 
-      # ================= CONFIGURE =================
+      # ================= BUILD =================
       - name: Configure CMake
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_FLAGS="--coverage -O0 -g" \
+            -DCMAKE_CXX_FLAGS="--coverage" \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      # ================= BUILD =================
       - name: Build project
-        run: |
-          cmake --build build --parallel
+        run: cmake --build build --parallel
 
       # ================= TEST =================
       - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+      # ================= COVERAGE (FIXED) =================
+      - name: Generate coverage (LCOV → SONAR FORMAT FIXED)
         run: |
-          ctest --test-dir build --output-on-failure
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '/usr/*' '*/tests/*' --output-file coverage.info
 
-      # ================= COVERAGE =================
-      - name: Generate coverage report
+      # Convert to XML (Sonar accepts XML better)
+      - name: Convert coverage to XML
         run: |
-          lcov --capture \
-            --directory build \
-            --output-file coverage.info \
-            --ignore-errors mismatch
-
-          lcov --remove coverage.info \
-            '/usr/*' \
-            'tests/*' \
-            --output-file coverage.info
-
-          lcov --list coverage.info
+          gcovr -r . --xml-pretty -o coverage.xml
 
       # ================= SONARCLOUD =================
       - name: SonarCloud Scan
@@ -73,4 +60,4 @@ jobs:
             -Dsonar.sources=src
             -Dsonar.tests=tests
             -Dsonar.cfamily.compile-commands=build/compile_commands.json
-            -Dsonar.cfamily.gcov.reportsPath=.
+            -Dsonar.coverageReportPaths=coverage.info
