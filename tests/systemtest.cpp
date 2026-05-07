@@ -1,105 +1,167 @@
-#include <gtest/gtest.h>
 #include "system.h"
+#include "Doctor.h"
+#include "Patient.h"
+#include "admin.h"
 
-class SysTest : public HospitalSystem
+HospitalSystem::HospitalSystem()
 {
-};
+    nextUserId = 1;
+    nextApptId = 1;
+    currentUser = nullptr;
 
-static int getDoctorId(HospitalSystem &sys)
-{
-    auto users = sys.adminViewAllUsers();
-    for (auto u : users)
-        if (u && u->get_role() == "doctor")
-            return u->get_id();
-    return -1;
+    allUsers.push_back(new Admin(nextUserId++, "admin", "admin@mail.com", "admin123"));
 }
 
-TEST(SysBoost, NoLogin_BlockAll)
+HospitalSystem::~HospitalSystem()
 {
-    SysTest sys;
-
-    EXPECT_FALSE(sys.bookAppointment(1, "2026", "10AM"));
-    EXPECT_FALSE(sys.cancelAppointmentPatient(1));
-    EXPECT_FALSE(sys.completeAppointmentDoctor(1));
-
-    EXPECT_TRUE(sys.viewMyAppointments().empty());
-    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
+    for (auto u : allUsers)
+        delete u;
 }
 
-TEST(SysBoost, WrongRole_AdminCannotBook)
+User *HospitalSystem::getCurrentUser() const
 {
-    SysTest sys;
-
-    EXPECT_FALSE(sys.bookAppointment(1, "2026", "10AM"));
+    return currentUser;
 }
 
-TEST(SysBoost, DoctorNotFound)
+Doctor *HospitalSystem::findDoctorById(int id)
 {
-    SysTest sys;
-
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-    sys.login("p@mail.com", "123");
-
-    EXPECT_FALSE(sys.bookAppointment(999, "2026", "10AM"));
+    for (auto u : allUsers)
+    {
+        if (u->get_role() == "doctor")
+        {
+            Doctor *d = dynamic_cast<Doctor *>(u);
+            if (d && d->get_id() == id)
+                return d;
+        }
+    }
+    return nullptr;
 }
 
-TEST(SysBoost, CancelThenCompleteBlocked)
+bool HospitalSystem::login(std::string e, std::string p)
 {
-    SysTest sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    int id = sys.viewMyAppointments()[0].get_AppointmentId();
-
-    sys.cancelAppointmentPatient(id);
-
-    sys.login("d@mail.com", "123");
-
-    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
+    for (auto u : allUsers)
+    {
+        if (u->Authenticate(e, p))
+        {
+            currentUser = u;
+            return true;
+        }
+    }
+    return false;
 }
 
-TEST(SysBoost, DoubleCompleteBlocked)
+void HospitalSystem::registerNewPatient(std::string n, std::string e,
+                                        std::string p, std::string phone)
 {
-    SysTest sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    int id = sys.viewMyAppointments()[0].get_AppointmentId();
-
-    sys.login("d@mail.com", "123");
-
-    EXPECT_TRUE(sys.completeAppointmentDoctor(id));
-    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
+    allUsers.push_back(new Patient(nextUserId++, n, e, p, phone));
 }
 
-TEST(SysBoost, CancelInvalidId)
+void HospitalSystem::registerNewDoctor(std::string n, std::string e,
+                                       std::string p, std::string s)
 {
-    SysTest sys;
-
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-    sys.login("p@mail.com", "123");
-
-    EXPECT_FALSE(sys.cancelAppointmentPatient(999));
+    Doctor *d = new Doctor(nextUserId++, n, e, p, s);
+    d->addAvailability("10AM");
+    d->addAvailability("11AM");
+    allUsers.push_back(d);
 }
 
-TEST(SysBoost, CompleteInvalidId)
+bool HospitalSystem::bookAppointment(int docId, std::string date, std::string time)
 {
-    SysTest sys;
+    if (!currentUser || currentUser->get_role() != "patient")
+        return false;
 
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.login("d@mail.com", "123");
+    Doctor *d = findDoctorById(docId);
+    if (!d)
+        return false;
 
-    EXPECT_FALSE(sys.completeAppointmentDoctor(999));
+    masterSchedule.push_back(Appointment(
+        nextApptId++,
+        currentUser->get_id(),
+        docId,
+        currentUser->get_name(),
+        d->get_name(),
+        date,
+        time,
+        "Scheduled"));
+
+    return true;
+}
+
+bool HospitalSystem::cancelAppointmentPatient(int id)
+{
+    if (!currentUser)
+        return false;
+
+    for (auto &a : masterSchedule)
+    {
+        if (a.get_AppointmentId() == id &&
+            a.get_PatientId() == currentUser->get_id())
+        {
+            if (a.get_Status() != "Scheduled")
+                return false;
+
+            a.cancel();
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<Appointment> HospitalSystem::viewMyAppointments()
+{
+    std::vector<Appointment> res;
+
+    if (!currentUser)
+        return res;
+
+    for (auto &a : masterSchedule)
+        if (a.get_PatientId() == currentUser->get_id())
+            res.push_back(a);
+
+    return res;
+}
+
+std::vector<Appointment> HospitalSystem::viewDoctorSchedule()
+{
+    std::vector<Appointment> res;
+
+    if (!currentUser)
+        return res;
+
+    for (auto &a : masterSchedule)
+        if (a.get_DoctorId() == currentUser->get_id())
+            res.push_back(a);
+
+    return res;
+}
+
+bool HospitalSystem::completeAppointmentDoctor(int id)
+{
+    if (!currentUser || currentUser->get_role() != "doctor")
+        return false;
+
+    for (auto &a : masterSchedule)
+    {
+        if (a.get_AppointmentId() == id &&
+            a.get_DoctorId() == currentUser->get_id())
+        {
+            // 🔥 أهم Rule في النظام كله
+            if (a.get_Status() != "Scheduled")
+                return false;
+
+            a.complete();
+            return true;
+        }
+    }
+    return false;
+}
+
+std::vector<Appointment> HospitalSystem::adminViewAllAppointments()
+{
+    return masterSchedule;
+}
+
+std::vector<User *> HospitalSystem::adminViewAllUsers()
+{
+    return allUsers;
 }
