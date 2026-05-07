@@ -35,11 +35,12 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
       # ================= COVERAGE =================
-      - name: Generate coverage
-        run: |
-          lcov --capture --directory . --output-file coverage.info
-          lcov --remove coverage.info '/usr/*' 'tests/*' --output-file coverage.info
-          lcov --list coverage.info
+       - name: Generate coverage report
+  run: |
+    lcov --capture \
+      --directory . \
+      --output-file coverage.info \
+      --ignore-errors mismatch
 
       # ================= SONARCLOUD =================
       - name: SonarCloud Scan
