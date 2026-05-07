@@ -6,53 +6,32 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 enable_testing()
 
-# =========================
-# GoogleTest
-# =========================
 find_package(GTest REQUIRED)
 
-# =========================
-# Source files
-# =========================
+# ===== SOURCE FILES =====
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/*.cpp)
 list(FILTER SRC_FILES EXCLUDE REGEX ".*/Main\\.cpp$")
 
-# =========================
-# Core Library
-# =========================
+# ===== CORE LIBRARY =====
 add_library(hospital_core ${SRC_FILES})
 
-# IMPORTANT: make headers visible to ALL targets
-target_include_directories(hospital_core PUBLIC
+# 🔥 IMPORTANT FIX (GLOBAL SCOPE INCLUDE)
+target_include_directories(hospital_core SYSTEM PUBLIC
     ${CMAKE_SOURCE_DIR}/src
 )
 
-# =========================
-# Main Application
-# =========================
+# ===== MAIN APP =====
 add_executable(hospital_app src/Main.cpp)
-
 target_link_libraries(hospital_app hospital_core)
 
-# =========================
-# Test files
-# =========================
+# ===== TESTS =====
 file(GLOB_RECURSE TEST_FILES CONFIGURE_DEPENDS tests/*.cpp)
 
 add_executable(run_tests ${TEST_FILES})
+target_link_libraries(run_tests hospital_core GTest::GTest GTest::Main)
 
-target_link_libraries(run_tests
-    hospital_core
-    GTest::GTest
-    GTest::Main
-)
-
-# IMPORTANT: ensure tests can see headers
-target_include_directories(run_tests PUBLIC
+target_include_directories(run_tests SYSTEM PUBLIC
     ${CMAKE_SOURCE_DIR}/src
 )
 
-# =========================
-# Enable testing
-# =========================
 add_test(NAME unit_tests COMMAND run_tests)
