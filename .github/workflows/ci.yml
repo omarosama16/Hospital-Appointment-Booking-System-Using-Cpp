@@ -1,4 +1,4 @@
-name: C++ CI Pipeline
+name: C++ Full CI Pipeline
 
 on:
   push:
@@ -13,44 +13,45 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # ─── STEP 1 · BUILD ─────────────────────────────────────────
+      # ================= DEPENDENCIES =================
       - name: Install dependencies
         run: |
-          sudo apt-get update -y
-          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y \
-            -o Acquire::Retries=3 \
-            -o Acquire::http::Timeout=30 \
-            cmake g++ libgtest-dev gcovr
+          sudo apt update
+          sudo apt install -y cmake g++ gcovr lcov libgtest-dev
 
+      # ================= BUILD =================
       - name: Configure CMake
         run: |
-          cmake -B build \
+          cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_FLAGS="--coverage" \
-            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+            -DCMAKE_CXX_FLAGS="--coverage"
 
       - name: Build project
         run: cmake --build build --parallel
 
-      # ─── STEP 2 · TEST ──────────────────────────────────────────
-      - name: Run unit tests
-        run: |
-          cd build
-          ctest --output-on-failure
+      # ================= TEST =================
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
 
-      - name: Generate coverage report
+      # ================= COVERAGE =================
+      - name: Generate coverage
         run: |
-          gcovr --root . \
-            --sonarqube \
-            --output coverage.xml \
-            --exclude tests/
+          lcov --capture --directory . --output-file coverage.info
+          lcov --remove coverage.info '/usr/*' 'tests/*' --output-file coverage.info
+          lcov --list coverage.info
 
-      # ─── STEP 3 · CODE QUALITY (SonarQube) ──────────────────────
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v5
+      # ================= SONARCLOUD =================
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          args: >
+            -Dsonar.projectKey=HospitalProject
+            -Dsonar.organization=YOUR_ORG_NAME
+            -Dsonar.sources=src
+            -Dsonar.tests=tests
+            -Dsonar.cfamily.build-wrapper-output=build
+            -Dsonar.cfamily.threads=2
