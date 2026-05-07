@@ -1,167 +1,267 @@
+#include <gtest/gtest.h>
 #include "system.h"
-#include "Doctor.h"
-#include "Patient.h"
-#include "admin.h"
 
-HospitalSystem::HospitalSystem()
+class TestSystem : public HospitalSystem
 {
-    nextUserId = 1;
-    nextApptId = 1;
-    currentUser = nullptr;
+public:
+    using HospitalSystem::adminViewAllAppointments;
+    using HospitalSystem::adminViewAllUsers;
+};
 
-    allUsers.push_back(new Admin(nextUserId++, "admin", "admin@mail.com", "admin123"));
-}
-
-HospitalSystem::~HospitalSystem()
+static int getDoctorId(HospitalSystem &sys)
 {
-    for (auto u : allUsers)
-        delete u;
-}
+    auto users = sys.adminViewAllUsers();
 
-User *HospitalSystem::getCurrentUser() const
-{
-    return currentUser;
-}
-
-Doctor *HospitalSystem::findDoctorById(int id)
-{
-    for (auto u : allUsers)
+    for (auto u : users)
     {
-        if (u->get_role() == "doctor")
-        {
-            Doctor *d = dynamic_cast<Doctor *>(u);
-            if (d && d->get_id() == id)
-                return d;
-        }
+        if (u && u->get_role() == "doctor")
+            return u->get_id();
     }
-    return nullptr;
+
+    return -1;
 }
 
-bool HospitalSystem::login(std::string e, std::string p)
+TEST(HospitalSystemTest, LoginSuccess)
 {
-    for (auto u : allUsers)
-    {
-        if (u->Authenticate(e, p))
-        {
-            currentUser = u;
-            return true;
-        }
-    }
-    return false;
+    HospitalSystem sys;
+
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+
+    EXPECT_TRUE(sys.login("p@mail.com", "123"));
 }
 
-void HospitalSystem::registerNewPatient(std::string n, std::string e,
-                                        std::string p, std::string phone)
+TEST(HospitalSystemTest, LoginWrongPassword)
 {
-    allUsers.push_back(new Patient(nextUserId++, n, e, p, phone));
+    HospitalSystem sys;
+
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+
+    EXPECT_FALSE(sys.login("p@mail.com", "wrong"));
 }
 
-void HospitalSystem::registerNewDoctor(std::string n, std::string e,
-                                       std::string p, std::string s)
+TEST(HospitalSystemTest, LoginWrongEmail)
 {
-    Doctor *d = new Doctor(nextUserId++, n, e, p, s);
-    d->addAvailability("10AM");
-    d->addAvailability("11AM");
-    allUsers.push_back(d);
+    HospitalSystem sys;
+
+    EXPECT_FALSE(sys.login("wrong@mail.com", "123"));
 }
 
-bool HospitalSystem::bookAppointment(int docId, std::string date, std::string time)
+TEST(HospitalSystemTest, BookAppointmentSuccess)
 {
-    if (!currentUser || currentUser->get_role() != "patient")
-        return false;
+    HospitalSystem sys;
 
-    Doctor *d = findDoctorById(docId);
-    if (!d)
-        return false;
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
 
-    masterSchedule.push_back(Appointment(
-        nextApptId++,
-        currentUser->get_id(),
-        docId,
-        currentUser->get_name(),
-        d->get_name(),
-        date,
-        time,
-        "Scheduled"));
+    sys.login("p@mail.com", "123");
 
-    return true;
+    int docId = getDoctorId(sys);
+
+    EXPECT_TRUE(sys.bookAppointment(docId, "2026-01-01", "10AM"));
 }
 
-bool HospitalSystem::cancelAppointmentPatient(int id)
+TEST(HospitalSystemTest, BookAppointmentWithoutLogin)
 {
-    if (!currentUser)
-        return false;
+    HospitalSystem sys;
 
-    for (auto &a : masterSchedule)
-    {
-        if (a.get_AppointmentId() == id &&
-            a.get_PatientId() == currentUser->get_id())
-        {
-            if (a.get_Status() != "Scheduled")
-                return false;
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
 
-            a.cancel();
-            return true;
-        }
-    }
-    return false;
+    int docId = getDoctorId(sys);
+
+    EXPECT_FALSE(sys.bookAppointment(docId, "2026", "10AM"));
 }
 
-std::vector<Appointment> HospitalSystem::viewMyAppointments()
+TEST(HospitalSystemTest, BookAppointmentAsAdmin)
 {
-    std::vector<Appointment> res;
+    HospitalSystem sys;
 
-    if (!currentUser)
-        return res;
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
 
-    for (auto &a : masterSchedule)
-        if (a.get_PatientId() == currentUser->get_id())
-            res.push_back(a);
+    sys.login("admin@mail.com", "admin123");
 
-    return res;
+    int docId = getDoctorId(sys);
+
+    EXPECT_FALSE(sys.bookAppointment(docId, "2026", "10AM"));
 }
 
-std::vector<Appointment> HospitalSystem::viewDoctorSchedule()
+TEST(HospitalSystemTest, BookAppointmentDoctorNotFound)
 {
-    std::vector<Appointment> res;
+    HospitalSystem sys;
 
-    if (!currentUser)
-        return res;
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
 
-    for (auto &a : masterSchedule)
-        if (a.get_DoctorId() == currentUser->get_id())
-            res.push_back(a);
+    sys.login("p@mail.com", "123");
 
-    return res;
+    EXPECT_FALSE(sys.bookAppointment(999, "2026", "10AM"));
 }
 
-bool HospitalSystem::completeAppointmentDoctor(int id)
+TEST(HospitalSystemTest, CancelAppointmentSuccess)
 {
-    if (!currentUser || currentUser->get_role() != "doctor")
-        return false;
+    HospitalSystem sys;
 
-    for (auto &a : masterSchedule)
-    {
-        if (a.get_AppointmentId() == id &&
-            a.get_DoctorId() == currentUser->get_id())
-        {
-            // 🔥 أهم Rule في النظام كله
-            if (a.get_Status() != "Scheduled")
-                return false;
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
 
-            a.complete();
-            return true;
-        }
-    }
-    return false;
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    EXPECT_TRUE(sys.cancelAppointmentPatient(apptId));
 }
 
-std::vector<Appointment> HospitalSystem::adminViewAllAppointments()
+TEST(HospitalSystemTest, CancelAppointmentInvalidId)
 {
-    return masterSchedule;
+    HospitalSystem sys;
+
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+
+    sys.login("p@mail.com", "123");
+
+    EXPECT_FALSE(sys.cancelAppointmentPatient(999));
 }
 
-std::vector<User *> HospitalSystem::adminViewAllUsers()
+TEST(HospitalSystemTest, CancelWithoutLogin)
 {
-    return allUsers;
+    HospitalSystem sys;
+
+    EXPECT_FALSE(sys.cancelAppointmentPatient(1));
+}
+
+TEST(HospitalSystemTest, ViewAppointmentsEmpty)
+{
+    HospitalSystem sys;
+
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+
+    sys.login("p@mail.com", "123");
+
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
+}
+
+TEST(HospitalSystemTest, ViewAppointmentsWithoutLogin)
+{
+    HospitalSystem sys;
+
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
+}
+
+TEST(HospitalSystemTest, DoctorCompleteSuccess)
+{
+    HospitalSystem sys;
+
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    sys.login("d@mail.com", "123");
+
+    EXPECT_TRUE(sys.completeAppointmentDoctor(apptId));
+}
+
+TEST(HospitalSystemTest, DoctorCompleteInvalidAppointment)
+{
+    HospitalSystem sys;
+
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
+
+    sys.login("d@mail.com", "123");
+
+    EXPECT_FALSE(sys.completeAppointmentDoctor(999));
+}
+
+TEST(HospitalSystemTest, CompleteWithoutLogin)
+{
+    HospitalSystem sys;
+
+    EXPECT_FALSE(sys.completeAppointmentDoctor(1));
+}
+
+TEST(HospitalSystemTest, ViewDoctorSchedule)
+{
+    HospitalSystem sys;
+
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+
+    int docId = getDoctorId(sys);
+
+    sys.login("p@mail.com", "123");
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    sys.login("d@mail.com", "123");
+
+    EXPECT_FALSE(sys.viewDoctorSchedule().empty());
+}
+
+TEST(HospitalSystemTest, ViewDoctorScheduleWithoutLogin)
+{
+    HospitalSystem sys;
+
+    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
+}
+
+TEST(HospitalSystemTest, DoctorCannotCancelPatientAppointment)
+{
+    HospitalSystem sys;
+
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+
+    int docId = getDoctorId(sys);
+
+    sys.login("p@mail.com", "123");
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    sys.login("d@mail.com", "123");
+
+    EXPECT_FALSE(sys.cancelAppointmentPatient(apptId));
+}
+
+TEST(HospitalSystemTest, PatientCannotCompleteAppointment)
+{
+    HospitalSystem sys;
+
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+
+    int docId = getDoctorId(sys);
+
+    sys.login("p@mail.com", "123");
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    EXPECT_FALSE(sys.completeAppointmentDoctor(apptId));
+}
+
+TEST(HospitalSystemTest, AdminViewUsers)
+{
+    TestSystem sys;
+
+    auto users = sys.adminViewAllUsers();
+
+    EXPECT_FALSE(users.empty());
+}
+
+TEST(HospitalSystemTest, AdminViewAppointments)
+{
+    TestSystem sys;
+
+    EXPECT_TRUE(sys.adminViewAllAppointments().empty());
 }
