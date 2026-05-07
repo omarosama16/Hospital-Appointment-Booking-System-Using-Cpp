@@ -68,3 +68,45 @@ TEST(UserTest, AuthenticateEmpty)
 
     EXPECT_TRUE(u.Authenticate("", ""));
 }
+TEST(SysBoost, NoLoginBlockAllActions)
+{
+    HospitalSystem sys;
+
+    EXPECT_FALSE(sys.bookAppointment(1, "2026", "10AM"));
+    EXPECT_FALSE(sys.cancelAppointmentPatient(1));
+    EXPECT_FALSE(sys.completeAppointmentDoctor(1));
+
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
+    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
+}
+
+TEST(SysBoost, DoctorNotFoundBranch)
+{
+    HospitalSystem sys;
+
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+    sys.login("p@mail.com", "123");
+
+    EXPECT_FALSE(sys.bookAppointment(99999, "2026", "10AM"));
+}
+
+TEST(SysBoost, CancelThenCompleteEdge)
+{
+    HospitalSystem sys;
+
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+
+    int docId = sys.adminViewAllUsers()[0]->get_id() + 1;
+
+    sys.login("p@mail.com", "123");
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    sys.cancelAppointmentPatient(id);
+
+    sys.login("d@mail.com", "123");
+
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
+}
