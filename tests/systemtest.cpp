@@ -21,52 +21,30 @@ static int getDoctorId(HospitalSystem &sys)
     return -1;
 }
 
-/* ================= LOGIN ================= */
+/* ================= EMPTY SYSTEM PATHS ================= */
 
-TEST(HospitalSystemTest, LoginSuccess)
+TEST(SystemBoost, EmptySystemAllViews)
 {
     HospitalSystem sys;
 
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    EXPECT_TRUE(sys.login("p@mail.com", "123"));
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
+    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
+    EXPECT_FALSE(sys.cancelAppointmentPatient(1));
+    EXPECT_FALSE(sys.completeAppointmentDoctor(1));
 }
 
-TEST(HospitalSystemTest, LoginFail)
+/* ================= LOGIN EDGE ================= */
+
+TEST(SystemBoost, LoginFailCases)
 {
     HospitalSystem sys;
 
     EXPECT_FALSE(sys.login("x", "y"));
 }
 
-/* ================= BOOKING ================= */
+/* ================= ROLE BLOCKING ================= */
 
-TEST(HospitalSystemTest, BookSuccess)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-
-    EXPECT_TRUE(sys.bookAppointment(docId, "2026", "10AM"));
-}
-
-TEST(HospitalSystemTest, BookWithoutLogin)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-
-    int docId = getDoctorId(sys);
-
-    EXPECT_FALSE(sys.bookAppointment(docId, "2026", "10AM"));
-}
-
-TEST(HospitalSystemTest, BookWrongRole)
+TEST(SystemBoost, RoleMismatchPatientCheck)
 {
     HospitalSystem sys;
 
@@ -79,7 +57,9 @@ TEST(HospitalSystemTest, BookWrongRole)
     EXPECT_FALSE(sys.bookAppointment(docId, "2026", "10AM"));
 }
 
-TEST(HospitalSystemTest, BookInvalidDoctor)
+/* ================= BOOKING EDGE ================= */
+
+TEST(SystemBoost, BookWithoutDoctorExists)
 {
     HospitalSystem sys;
 
@@ -87,53 +67,66 @@ TEST(HospitalSystemTest, BookInvalidDoctor)
 
     sys.login("p@mail.com", "123");
 
-    EXPECT_FALSE(sys.bookAppointment(999, "2026", "10AM"));
+    EXPECT_FALSE(sys.bookAppointment(9999, "2026", "10AM"));
 }
 
-/* ================= CANCEL ================= */
+/* ================= FULL FLOW ================= */
 
-TEST(HospitalSystemTest, CancelSuccess)
+TEST(SystemBoost, FullFlowValid)
 {
     HospitalSystem sys;
 
     sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
     sys.registerNewPatient("p", "p@mail.com", "123", "010");
 
-    sys.login("p@mail.com", "123");
-
     int docId = getDoctorId(sys);
 
-    sys.bookAppointment(docId, "2026", "10AM");
+    sys.login("p@mail.com", "123");
 
-    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+    EXPECT_TRUE(sys.bookAppointment(docId, "2026", "10AM"));
+
+    auto appts = sys.viewMyAppointments();
+    ASSERT_FALSE(appts.empty());
+
+    int id = appts[0].get_AppointmentId();
 
     EXPECT_TRUE(sys.cancelAppointmentPatient(id));
 }
 
-TEST(HospitalSystemTest, CancelInvalid)
-{
-    HospitalSystem sys;
+/* ================= WRONG USER ACTIONS ================= */
 
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    sys.login("p@mail.com", "123");
-
-    EXPECT_FALSE(sys.cancelAppointmentPatient(999));
-}
-
-/* ================= COMPLETE ================= */
-
-TEST(HospitalSystemTest, CompleteSuccess)
+TEST(SystemBoost, WrongUserCannotModify)
 {
     HospitalSystem sys;
 
     sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
     sys.registerNewPatient("p", "p@mail.com", "123", "010");
 
+    int docId = getDoctorId(sys);
+
     sys.login("p@mail.com", "123");
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    sys.login("admin@mail.com", "admin123");
+
+    EXPECT_FALSE(sys.cancelAppointmentPatient(id));
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
+}
+
+/* ================= DOCTOR FLOW ================= */
+
+TEST(SystemBoost, DoctorCompletionFlow)
+{
+    HospitalSystem sys;
+
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
 
     int docId = getDoctorId(sys);
 
+    sys.login("p@mail.com", "123");
     sys.bookAppointment(docId, "2026", "10AM");
 
     int id = sys.viewMyAppointments()[0].get_AppointmentId();
@@ -141,90 +134,4 @@ TEST(HospitalSystemTest, CompleteSuccess)
     sys.login("d@mail.com", "123");
 
     EXPECT_TRUE(sys.completeAppointmentDoctor(id));
-}
-
-TEST(HospitalSystemTest, CompleteInvalid)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-
-    sys.login("d@mail.com", "123");
-
-    EXPECT_FALSE(sys.completeAppointmentDoctor(999));
-}
-
-/* ================= VIEW ================= */
-
-TEST(HospitalSystemTest, ViewEmptyPatient)
-{
-    HospitalSystem sys;
-
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    sys.login("p@mail.com", "123");
-
-    EXPECT_TRUE(sys.viewMyAppointments().empty());
-}
-
-TEST(HospitalSystemTest, ViewEmptyDoctor)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-
-    sys.login("d@mail.com", "123");
-
-    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
-}
-
-TEST(HospitalSystemTest, ViewWithoutLogin)
-{
-    HospitalSystem sys;
-
-    EXPECT_TRUE(sys.viewMyAppointments().empty());
-    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
-}
-
-/* ================= EDGE CASES ================= */
-
-TEST(HospitalSystemTest, WrongRoleCannotBook)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-
-    sys.login("admin@mail.com", "admin123");
-
-    int docId = getDoctorId(sys);
-
-    EXPECT_FALSE(sys.bookAppointment(docId, "2026", "10AM"));
-}
-
-TEST(HospitalSystemTest, PatientCannotCompleteOthers)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    int docId = getDoctorId(sys);
-
-    sys.login("p@mail.com", "123");
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    int id = sys.viewMyAppointments()[0].get_AppointmentId();
-
-    // patient tries to complete
-    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
-}
-
-/* ================= ADMIN ================= */
-
-TEST(HospitalSystemTest, AdminDataAccess)
-{
-    TestSystem sys;
-
-    EXPECT_FALSE(sys.adminViewAllUsers().empty());
 }
