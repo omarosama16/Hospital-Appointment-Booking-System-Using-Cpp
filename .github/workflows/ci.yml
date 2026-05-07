@@ -73,5 +73,4 @@ jobs:
             -Dsonar.sources=src
             -Dsonar.tests=tests
             -Dsonar.cfamily.compile-commands=build/compile_commands.json
-            -Dsonar.coverageReportPaths=coverage.info
             -Dsonar.cfamily.gcov.reportsPath=.
