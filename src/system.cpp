@@ -30,10 +30,12 @@ Doctor *HospitalSystem::findDoctorById(int id)
         if (u->get_role() == "doctor")
         {
             Doctor *d = dynamic_cast<Doctor *>(u);
+
             if (d && d->get_id() == id)
                 return d;
         }
     }
+
     return nullptr;
 }
 
@@ -47,28 +49,36 @@ bool HospitalSystem::login(std::string e, std::string p)
             return true;
         }
     }
+
     return false;
 }
 
-void HospitalSystem::registerNewPatient(std::string n, std::string e, std::string p, std::string phone)
+void HospitalSystem::registerNewPatient(std::string n, std::string e,
+                                        std::string p, std::string phone)
 {
     allUsers.push_back(new Patient(nextUserId++, n, e, p, phone));
 }
 
-void HospitalSystem::registerNewDoctor(std::string n, std::string e, std::string p, std::string s)
+void HospitalSystem::registerNewDoctor(std::string n, std::string e,
+                                       std::string p, std::string s)
 {
     Doctor *d = new Doctor(nextUserId++, n, e, p, s);
+
     d->addAvailability("10AM");
     d->addAvailability("11AM");
+
     allUsers.push_back(d);
 }
 
-bool HospitalSystem::bookAppointment(int docId, std::string date, std::string time)
+bool HospitalSystem::bookAppointment(int docId,
+                                     std::string date,
+                                     std::string time)
 {
     if (!currentUser || currentUser->get_role() != "patient")
         return false;
 
     Doctor *d = findDoctorById(docId);
+
     if (!d)
         return false;
 
@@ -87,6 +97,9 @@ bool HospitalSystem::bookAppointment(int docId, std::string date, std::string ti
 
 bool HospitalSystem::cancelAppointmentPatient(int id)
 {
+    if (!currentUser)
+        return false;
+
     for (auto &a : masterSchedule)
     {
         if (a.get_AppointmentId() == id &&
@@ -96,6 +109,7 @@ bool HospitalSystem::cancelAppointmentPatient(int id)
             return true;
         }
     }
+
     return false;
 }
 
@@ -103,9 +117,14 @@ std::vector<Appointment> HospitalSystem::viewMyAppointments()
 {
     std::vector<Appointment> res;
 
+    if (!currentUser)
+        return res;
+
     for (auto &a : masterSchedule)
+    {
         if (a.get_PatientId() == currentUser->get_id())
             res.push_back(a);
+    }
 
     return res;
 }
@@ -114,15 +133,23 @@ std::vector<Appointment> HospitalSystem::viewDoctorSchedule()
 {
     std::vector<Appointment> res;
 
+    if (!currentUser)
+        return res;
+
     for (auto &a : masterSchedule)
+    {
         if (a.get_DoctorId() == currentUser->get_id())
             res.push_back(a);
+    }
 
     return res;
 }
 
 bool HospitalSystem::completeAppointmentDoctor(int id)
 {
+    if (!currentUser)
+        return false;
+
     for (auto &a : masterSchedule)
     {
         if (a.get_AppointmentId() == id &&
@@ -132,6 +159,7 @@ bool HospitalSystem::completeAppointmentDoctor(int id)
             return true;
         }
     }
+
     return false;
 }
 
