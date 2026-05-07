@@ -1,267 +1,137 @@
 #include <gtest/gtest.h>
 #include "system.h"
 
-class TestSystem : public HospitalSystem
+class SysTest : public HospitalSystem
 {
 public:
     using HospitalSystem::adminViewAllAppointments;
     using HospitalSystem::adminViewAllUsers;
 };
 
-static int getDoctorId(HospitalSystem &sys)
+static int docId(HospitalSystem &sys)
 {
-    auto users = sys.adminViewAllUsers();
-
-    for (auto u : users)
-    {
+    for (auto u : sys.adminViewAllUsers())
         if (u && u->get_role() == "doctor")
             return u->get_id();
-    }
 
     return -1;
 }
 
-TEST(HospitalSystemTest, LoginSuccess)
+static void setupPatient(HospitalSystem &sys)
+{
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+    sys.login("p@mail.com", "123");
+}
+
+static void setupDoctor(HospitalSystem &sys)
+{
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
+}
+
+/* ================= AUTH ================= */
+
+TEST(Sys, Login)
 {
     HospitalSystem sys;
 
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
+    setupPatient(sys);
     EXPECT_TRUE(sys.login("p@mail.com", "123"));
-}
-
-TEST(HospitalSystemTest, LoginWrongPassword)
-{
-    HospitalSystem sys;
-
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
     EXPECT_FALSE(sys.login("p@mail.com", "wrong"));
+    EXPECT_FALSE(sys.login("x@mail.com", "123"));
 }
 
-TEST(HospitalSystemTest, LoginWrongEmail)
+/* ================= BOOKING ================= */
+
+TEST(Sys, Booking)
 {
     HospitalSystem sys;
 
-    EXPECT_FALSE(sys.login("wrong@mail.com", "123"));
-}
+    setupDoctor(sys);
+    setupPatient(sys);
 
-TEST(HospitalSystemTest, BookAppointmentSuccess)
-{
-    HospitalSystem sys;
+    int id = docId(sys);
 
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-
-    EXPECT_TRUE(sys.bookAppointment(docId, "2026-01-01", "10AM"));
-}
-
-TEST(HospitalSystemTest, BookAppointmentWithoutLogin)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-
-    int docId = getDoctorId(sys);
-
-    EXPECT_FALSE(sys.bookAppointment(docId, "2026", "10AM"));
-}
-
-TEST(HospitalSystemTest, BookAppointmentAsAdmin)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-
-    sys.login("admin@mail.com", "admin123");
-
-    int docId = getDoctorId(sys);
-
-    EXPECT_FALSE(sys.bookAppointment(docId, "2026", "10AM"));
-}
-
-TEST(HospitalSystemTest, BookAppointmentDoctorNotFound)
-{
-    HospitalSystem sys;
-
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    sys.login("p@mail.com", "123");
-
+    EXPECT_TRUE(sys.bookAppointment(id, "2026", "10AM"));
     EXPECT_FALSE(sys.bookAppointment(999, "2026", "10AM"));
 }
 
-TEST(HospitalSystemTest, CancelAppointmentSuccess)
+/* ================= AUTH RULES ================= */
+
+TEST(Sys, BookingRules)
 {
     HospitalSystem sys;
 
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+    setupDoctor(sys);
 
-    sys.login("p@mail.com", "123");
+    int id = docId(sys);
 
-    int docId = getDoctorId(sys);
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
-
-    EXPECT_TRUE(sys.cancelAppointmentPatient(apptId));
+    EXPECT_FALSE(sys.bookAppointment(id, "2026", "10AM"));
 }
 
-TEST(HospitalSystemTest, CancelAppointmentInvalidId)
+/* ================= CANCEL ================= */
+
+TEST(Sys, Cancel)
 {
     HospitalSystem sys;
 
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+    setupDoctor(sys);
+    setupPatient(sys);
 
-    sys.login("p@mail.com", "123");
+    int id = docId(sys);
 
+    sys.bookAppointment(id, "2026", "10AM");
+    int appt = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    EXPECT_TRUE(sys.cancelAppointmentPatient(appt));
     EXPECT_FALSE(sys.cancelAppointmentPatient(999));
 }
 
-TEST(HospitalSystemTest, CancelWithoutLogin)
+/* ================= COMPLETE ================= */
+
+TEST(Sys, Complete)
 {
     HospitalSystem sys;
 
-    EXPECT_FALSE(sys.cancelAppointmentPatient(1));
-}
+    setupDoctor(sys);
+    setupPatient(sys);
 
-TEST(HospitalSystemTest, ViewAppointmentsEmpty)
-{
-    HospitalSystem sys;
+    int id = docId(sys);
 
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    sys.login("p@mail.com", "123");
-
-    EXPECT_TRUE(sys.viewMyAppointments().empty());
-}
-
-TEST(HospitalSystemTest, ViewAppointmentsWithoutLogin)
-{
-    HospitalSystem sys;
-
-    EXPECT_TRUE(sys.viewMyAppointments().empty());
-}
-
-TEST(HospitalSystemTest, DoctorCompleteSuccess)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
+    sys.bookAppointment(id, "2026", "10AM");
+    int appt = sys.viewMyAppointments()[0].get_AppointmentId();
 
     sys.login("d@mail.com", "123");
 
-    EXPECT_TRUE(sys.completeAppointmentDoctor(apptId));
-}
-
-TEST(HospitalSystemTest, DoctorCompleteInvalidAppointment)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-
-    sys.login("d@mail.com", "123");
-
+    EXPECT_TRUE(sys.completeAppointmentDoctor(appt));
     EXPECT_FALSE(sys.completeAppointmentDoctor(999));
 }
 
-TEST(HospitalSystemTest, CompleteWithoutLogin)
+/* ================= VIEW ================= */
+
+TEST(Sys, Views)
 {
     HospitalSystem sys;
 
-    EXPECT_FALSE(sys.completeAppointmentDoctor(1));
-}
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
+    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
 
-TEST(HospitalSystemTest, ViewDoctorSchedule)
-{
-    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
 
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+    int id = docId(sys);
 
-    int docId = getDoctorId(sys);
+    sys.bookAppointment(id, "2026", "10AM");
 
-    sys.login("p@mail.com", "123");
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    sys.login("d@mail.com", "123");
-
+    EXPECT_FALSE(sys.viewMyAppointments().empty());
     EXPECT_FALSE(sys.viewDoctorSchedule().empty());
 }
 
-TEST(HospitalSystemTest, ViewDoctorScheduleWithoutLogin)
+/* ================= ADMIN ================= */
+
+TEST(Sys, Admin)
 {
-    HospitalSystem sys;
+    SysTest sys;
 
-    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
-}
-
-TEST(HospitalSystemTest, DoctorCannotCancelPatientAppointment)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    int docId = getDoctorId(sys);
-
-    sys.login("p@mail.com", "123");
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
-
-    sys.login("d@mail.com", "123");
-
-    EXPECT_FALSE(sys.cancelAppointmentPatient(apptId));
-}
-
-TEST(HospitalSystemTest, PatientCannotCompleteAppointment)
-{
-    HospitalSystem sys;
-
-    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
-
-    int docId = getDoctorId(sys);
-
-    sys.login("p@mail.com", "123");
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
-
-    EXPECT_FALSE(sys.completeAppointmentDoctor(apptId));
-}
-
-TEST(HospitalSystemTest, AdminViewUsers)
-{
-    TestSystem sys;
-
-    auto users = sys.adminViewAllUsers();
-
-    EXPECT_FALSE(users.empty());
-}
-
-TEST(HospitalSystemTest, AdminViewAppointments)
-{
-    TestSystem sys;
-
+    EXPECT_FALSE(sys.adminViewAllUsers().empty());
     EXPECT_TRUE(sys.adminViewAllAppointments().empty());
 }
