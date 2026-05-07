@@ -30,12 +30,10 @@ Doctor *HospitalSystem::findDoctorById(int id)
         if (u->get_role() == "doctor")
         {
             Doctor *d = dynamic_cast<Doctor *>(u);
-
             if (d && d->get_id() == id)
                 return d;
         }
     }
-
     return nullptr;
 }
 
@@ -49,7 +47,6 @@ bool HospitalSystem::login(std::string e, std::string p)
             return true;
         }
     }
-
     return false;
 }
 
@@ -74,11 +71,13 @@ bool HospitalSystem::bookAppointment(int docId,
                                      std::string date,
                                      std::string time)
 {
-    if (!currentUser || currentUser->get_role() != "patient")
+    if (!currentUser)
+        return false;
+
+    if (currentUser->get_role() != "patient")
         return false;
 
     Doctor *d = findDoctorById(docId);
-
     if (!d)
         return false;
 
@@ -150,11 +149,21 @@ bool HospitalSystem::completeAppointmentDoctor(int id)
     if (!currentUser)
         return false;
 
+    if (currentUser->get_role() != "doctor")
+        return false;
+
     for (auto &a : masterSchedule)
     {
         if (a.get_AppointmentId() == id &&
             a.get_DoctorId() == currentUser->get_id())
         {
+
+            if (a.get_Status() == "Cancelled")
+                return false;
+
+            if (a.get_Status() == "Completed")
+                return false;
+
             a.complete();
             return true;
         }
