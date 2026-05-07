@@ -18,12 +18,13 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/*.cpp)
 list(FILTER SRC_FILES EXCLUDE REGEX ".*/Main\\.cpp$")
 
 # =========================
-# Core Library (BEST PRACTICE)
+# Core Library
 # =========================
 add_library(hospital_core ${SRC_FILES})
 
-target_include_directories(hospital_core
-    PUBLIC ${CMAKE_SOURCE_DIR}/src
+# IMPORTANT: make headers visible to ALL targets
+target_include_directories(hospital_core PUBLIC
+    ${CMAKE_SOURCE_DIR}/src
 )
 
 # =========================
@@ -34,7 +35,7 @@ add_executable(hospital_app src/Main.cpp)
 target_link_libraries(hospital_app hospital_core)
 
 # =========================
-# Tests
+# Test files
 # =========================
 file(GLOB_RECURSE TEST_FILES CONFIGURE_DEPENDS tests/*.cpp)
 
@@ -46,12 +47,12 @@ target_link_libraries(run_tests
     GTest::Main
 )
 
-# Include headers for tests
-target_include_directories(run_tests
-    PRIVATE ${CMAKE_SOURCE_DIR}/src
+# IMPORTANT: ensure tests can see headers
+target_include_directories(run_tests PUBLIC
+    ${CMAKE_SOURCE_DIR}/src
 )
 
 # =========================
-# Enable CTest
+# Enable testing
 # =========================
 add_test(NAME unit_tests COMMAND run_tests)
