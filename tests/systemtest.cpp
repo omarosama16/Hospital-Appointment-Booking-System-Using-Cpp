@@ -8,19 +8,21 @@ public:
     using HospitalSystem::adminViewAllUsers;
 };
 
-static int docId(HospitalSystem &sys)
+/* ================= HELPERS ================= */
+
+static int getDoctorId(HospitalSystem &sys)
 {
     for (auto u : sys.adminViewAllUsers())
+    {
         if (u && u->get_role() == "doctor")
             return u->get_id();
-
+    }
     return -1;
 }
 
 static void setupPatient(HospitalSystem &sys)
 {
     sys.registerNewPatient("p", "p@mail.com", "123", "010");
-    sys.login("p@mail.com", "123");
 }
 
 static void setupDoctor(HospitalSystem &sys)
@@ -35,6 +37,7 @@ TEST(Sys, Login)
     HospitalSystem sys;
 
     setupPatient(sys);
+
     EXPECT_TRUE(sys.login("p@mail.com", "123"));
     EXPECT_FALSE(sys.login("p@mail.com", "wrong"));
     EXPECT_FALSE(sys.login("x@mail.com", "123"));
@@ -49,13 +52,16 @@ TEST(Sys, Booking)
     setupDoctor(sys);
     setupPatient(sys);
 
-    int id = docId(sys);
+    sys.login("p@mail.com", "123");
 
-    EXPECT_TRUE(sys.bookAppointment(id, "2026", "10AM"));
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    EXPECT_TRUE(sys.bookAppointment(docId, "2026", "10AM"));
     EXPECT_FALSE(sys.bookAppointment(999, "2026", "10AM"));
 }
 
-/* ================= AUTH RULES ================= */
+/* ================= RULES ================= */
 
 TEST(Sys, BookingRules)
 {
@@ -63,9 +69,10 @@ TEST(Sys, BookingRules)
 
     setupDoctor(sys);
 
-    int id = docId(sys);
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
 
-    EXPECT_FALSE(sys.bookAppointment(id, "2026", "10AM"));
+    EXPECT_FALSE(sys.bookAppointment(docId, "2026", "10AM"));
 }
 
 /* ================= CANCEL ================= */
@@ -77,12 +84,16 @@ TEST(Sys, Cancel)
     setupDoctor(sys);
     setupPatient(sys);
 
-    int id = docId(sys);
+    sys.login("p@mail.com", "123");
 
-    sys.bookAppointment(id, "2026", "10AM");
-    int appt = sys.viewMyAppointments()[0].get_AppointmentId();
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
 
-    EXPECT_TRUE(sys.cancelAppointmentPatient(appt));
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    EXPECT_TRUE(sys.cancelAppointmentPatient(apptId));
     EXPECT_FALSE(sys.cancelAppointmentPatient(999));
 }
 
@@ -95,35 +106,49 @@ TEST(Sys, Complete)
     setupDoctor(sys);
     setupPatient(sys);
 
-    int id = docId(sys);
+    sys.login("p@mail.com", "123");
 
-    sys.bookAppointment(id, "2026", "10AM");
-    int appt = sys.viewMyAppointments()[0].get_AppointmentId();
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
 
     sys.login("d@mail.com", "123");
 
-    EXPECT_TRUE(sys.completeAppointmentDoctor(appt));
+    EXPECT_TRUE(sys.completeAppointmentDoctor(apptId));
     EXPECT_FALSE(sys.completeAppointmentDoctor(999));
 }
 
-/* ================= VIEW ================= */
+/* ================= VIEWS ================= */
 
 TEST(Sys, Views)
 {
     HospitalSystem sys;
 
-    EXPECT_TRUE(sys.viewMyAppointments().empty());
-    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
-
     setupDoctor(sys);
     setupPatient(sys);
 
-    int id = docId(sys);
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
 
-    sys.bookAppointment(id, "2026", "10AM");
+    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
+
+    sys.login("p@mail.com", "123");
+    sys.bookAppointment(docId, "2026", "10AM");
 
     EXPECT_FALSE(sys.viewMyAppointments().empty());
-    EXPECT_FALSE(sys.viewDoctorSchedule().empty());
+
+    sys.login("d@mail.com", "123");
+
+    auto doctorView = sys.viewDoctorSchedule();
+    EXPECT_FALSE(doctorView.empty());
+    EXPECT_EQ(doctorView.size(), 1);
+
+    // switch back
+    sys.login("p@mail.com", "123");
+    EXPECT_EQ(sys.viewMyAppointments().size(), 1);
 }
 
 /* ================= ADMIN ================= */
