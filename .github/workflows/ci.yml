@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+      # ================= CHECKOUT =================
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -18,29 +20,37 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y cmake g++ gcovr lcov libgtest-dev
+          sudo apt install -y \
+            cmake \
+            g++ \
+            gcovr \
+            lcov \
+            libgtest-dev
 
-      # ================= BUILD =================
+      # ================= CONFIGURE =================
       - name: Configure CMake
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Debug \
             -DCMAKE_CXX_FLAGS="--coverage"
 
+      # ================= BUILD =================
       - name: Build project
-        run: cmake --build build --parallel
+        run: |
+          cmake --build build --parallel
 
       # ================= TEST =================
       - name: Run tests
-        run: ctest --test-dir build --output-on-failure
+        run: |
+          ctest --test-dir build --output-on-failure
 
       # ================= COVERAGE =================
-       - name: Generate coverage report
-  run: |
-    lcov --capture \
-      --directory . \
-      --output-file coverage.info \
-      --ignore-errors mismatch
+      - name: Generate coverage report
+        run: |
+          lcov --capture \
+            --directory . \
+            --output-file coverage.info \
+            --ignore-errors mismatch
 
       # ================= SONARCLOUD =================
       - name: SonarCloud Scan
@@ -54,5 +64,5 @@ jobs:
             -Dsonar.organization=YOUR_ORG_NAME
             -Dsonar.sources=src
             -Dsonar.tests=tests
-            -Dsonar.cfamily.build-wrapper-output=build
-            -Dsonar.cfamily.threads=2
+            -Dsonar.cfamily.compile-commands=build/compile_commands.json
+            -Dsonar.coverageReportPaths=coverage.info
