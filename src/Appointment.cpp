@@ -3,8 +3,8 @@
 
 Appointment::Appointment() : appointmentid(0), patientid(0), doctorid(0), date(""), time(""), status("") {}
 
-Appointment::Appointment(int a, int p, int d, std::string pa, std::string doc,
-                         std::string da, std::string t, std::string s)
+Appointment::Appointment(int a, int p, int d, const std::string& pa, const std::string& doc,
+                         const std::string& da, const std::string& t, const std::string& s)
 {
     appointmentid = a;
     patientid = p;
