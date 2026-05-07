@@ -1,47 +1,52 @@
-name: C++ CI + SonarQube Pipeline
+name: C++ CI Pipeline
 
 on:
   push:
-    branches: [ "*" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "*" ]
+    branches: [ main ]
 
 jobs:
-  build-and-test:
+  build-test-analyze:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Install compiler & tools
-      run: sudo apt-get update && sudo apt-get install -y g++ cmake libgtest-dev
+      # ─── STEP 1 · BUILD ─────────────────────────────────────────
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          DEBIAN_FRONTEND=noninteractive sudo apt-get install -y \
+            -o Acquire::Retries=3 \
+            -o Acquire::http::Timeout=30 \
+            cmake g++ libgtest-dev gcovr
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="--coverage" \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      - name: Build project
+        run: cmake --build build --parallel
 
-    - name: Build Google Test
-      run: |
-        cd /usr/src/gtest
-        sudo cmake .
-        sudo make
-        sudo cp lib/*.a /usr/lib
-    - name: Build main project
-      run: g++ src/*.cpp -Iinclude -o app
-
-    - name: Build tests
-      run: |
-        g++ tests/*.cpp \
-            src/*.cpp \
-            -Iinclude \
-            -lgtest -lgtest_main -pthread \
-            -o tests_runner
-    - name: Run tests
-      run: ./tests_runner
-
-    - name: SonarCloud Scan
-      uses: SonarSource/sonarcloud-github-action@v2
-      continue-on-error: true
-      with:
-        args: >
-          -Dsonar.projectKey=omarosama16_Hospital-Appointment-Booking-System-Using-Cpp
-          -Dsonar.organization=omarosama16
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      # ─── STEP 2 · TEST ──────────────────────────────────────────
+      - name: Run unit tests
+        run: |
+          cd build
+          ctest --output-on-failure
+      - name: Generate coverage report
+        run: |
+          gcovr --root . \
+            --sonarqube \
+            --output coverage.xml \
+            --exclude tests/
+      # ─── STEP 3 · CODE QUALITY (SonarQube) ──────────────────────
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
