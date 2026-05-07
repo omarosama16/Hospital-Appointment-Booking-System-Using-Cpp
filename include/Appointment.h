@@ -2,32 +2,48 @@
 
 #include <string>
 
-struct AppointmentInfo {
-    std::string patientName;
-    std::string doctorName;
-    std::string date;
-    std::string time;
-    std::string status;
+enum class Status
+{
+    Scheduled,
+    Cancelled,
+    Completed
 };
 
-class Appointment {
+class Appointment
+{
 private:
-    int appointmentId;
-    int patientId;
-    int doctorId;
+    int appointmentid;
+    int patientid;
+    int doctorid;
 
-    AppointmentInfo info;
+    std::string patientname;
+    std::string doctorname;
+    std::string date;
+    std::string time;
+
+    Status status;
 
 public:
     Appointment();
-    Appointment(int appointmentId, int patientId, int doctorId, const AppointmentInfo& info);
+
+    Appointment(int a, int p, int d,
+                std::string pa,
+                std::string doc,
+                std::string da,
+                std::string t,
+                Status s);
 
     void cancel();
     void complete();
 
     void print_row() const;
 
+    int get_AppointmentId() const;
+    int get_PatientId() const;
+    int get_DoctorId() const;
+
     std::string get_Date() const;
     std::string get_Time() const;
-    std::string get_Status() const;
+
+    Status get_Status() const;
 };

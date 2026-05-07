@@ -53,14 +53,18 @@ bool HospitalSystem::login(std::string e, std::string p)
     return false;
 }
 
-void HospitalSystem::registerNewPatient(std::string n, std::string e,
-                                        std::string p, std::string phone)
+void HospitalSystem::registerNewPatient(std::string n,
+                                        std::string e,
+                                        std::string p,
+                                        std::string phone)
 {
     allUsers.push_back(new Patient(nextUserId++, n, e, p, phone));
 }
 
-void HospitalSystem::registerNewDoctor(std::string n, std::string e,
-                                       std::string p, std::string s)
+void HospitalSystem::registerNewDoctor(std::string n,
+                                       std::string e,
+                                       std::string p,
+                                       std::string s)
 {
     Doctor *d = new Doctor(nextUserId++, n, e, p, s);
 
@@ -74,7 +78,11 @@ bool HospitalSystem::bookAppointment(int docId,
                                      std::string date,
                                      std::string time)
 {
-    if (!currentUser || currentUser->get_role() != "patient")
+
+    if (!currentUser)
+        return false;
+
+    if (currentUser->get_role() != "patient")
         return false;
 
     Doctor *d = findDoctorById(docId);
@@ -90,7 +98,7 @@ bool HospitalSystem::bookAppointment(int docId,
         d->get_name(),
         date,
         time,
-        "Scheduled"));
+        Status::Scheduled));
 
     return true;
 }
@@ -105,6 +113,9 @@ bool HospitalSystem::cancelAppointmentPatient(int id)
         if (a.get_AppointmentId() == id &&
             a.get_PatientId() == currentUser->get_id())
         {
+            if (a.get_Status() != Status::Scheduled)
+                return false;
+
             a.cancel();
             return true;
         }
@@ -155,8 +166,7 @@ bool HospitalSystem::completeAppointmentDoctor(int id)
         if (a.get_AppointmentId() == id &&
             a.get_DoctorId() == currentUser->get_id())
         {
-
-            if (a.get_Status() != "Scheduled")
+            if (a.get_Status() != Status::Scheduled)
                 return false;
 
             a.complete();

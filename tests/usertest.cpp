@@ -69,6 +69,7 @@ TEST(UserTest, AuthenticateEmpty)
 
     EXPECT_TRUE(u.Authenticate("", ""));
 }
+
 TEST(SysBoost, NoLoginBlockAllActions)
 {
     HospitalSystem sys;
@@ -98,9 +99,10 @@ TEST(SysBoost, CancelThenCompleteEdge)
     sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
     sys.registerNewPatient("p", "p@mail.com", "123", "010");
 
+    sys.login("p@mail.com", "123");
+
     int docId = sys.adminViewAllUsers()[0]->get_id() + 1;
 
-    sys.login("p@mail.com", "123");
     sys.bookAppointment(docId, "2026", "10AM");
 
     int id = sys.viewMyAppointments()[0].get_AppointmentId();

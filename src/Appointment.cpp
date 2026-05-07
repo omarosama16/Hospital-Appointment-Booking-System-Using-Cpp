@@ -1,54 +1,71 @@
 #include "Appointment.h"
 #include <iostream>
-#include <iomanip>
-
-using namespace std;
-
-/* ================= Constructors ================= */
 
 Appointment::Appointment()
-    : appointmentId(0), patientId(0), doctorId(0)
+    : appointmentid(0),
+      patientid(0),
+      doctorid(0),
+      patientname(""),
+      doctorname(""),
+      date(""),
+      time(""),
+      status(Status::Scheduled)
 {
-    info.date = "";
-    info.time = "";
-    info.status = "";
-    info.patientName = "";
-    info.doctorName = "";
 }
 
-Appointment::Appointment(int aId, int pId, int dId, const AppointmentInfo& inf)
-    : appointmentId(aId), patientId(pId), doctorId(dId), info(inf)
-{}
-
-/* ================= Actions ================= */
+Appointment::Appointment(int a, int p, int d,
+                         std::string pa,
+                         std::string doc,
+                         std::string da,
+                         std::string t,
+                         Status s)
+    : appointmentid(a),
+      patientid(p),
+      doctorid(d),
+      patientname(pa),
+      doctorname(doc),
+      date(da),
+      time(t),
+      status(s)
+{
+}
 
 void Appointment::cancel()
 {
-    info.status = "Cancelled";
+    if (status == Status::Scheduled)
+        status = Status::Cancelled;
 }
 
 void Appointment::complete()
 {
-    if (info.status != "Cancelled")
-        info.status = "Completed";
+    if (status == Status::Scheduled)
+        status = Status::Completed;
 }
-
-/* ================= Display ================= */
 
 void Appointment::print_row() const
 {
-    cout << left
-         << setw(5) << appointmentId
-         << setw(20) << info.patientName
-         << setw(20) << info.doctorName
-         << setw(12) << info.date
-         << setw(10) << info.time
-         << setw(12) << info.status
-         << "\n";
+    std::string s;
+
+    if (status == Status::Scheduled)
+        s = "Scheduled";
+    else if (status == Status::Cancelled)
+        s = "Cancelled";
+    else
+        s = "Completed";
+
+    std::cout << appointmentid << " "
+              << patientname << " "
+              << doctorname << " "
+              << date << " "
+              << time << " "
+              << s << "\n";
 }
 
-/* ================= Getters ================= */
+int Appointment::get_AppointmentId() const { return appointmentid; }
+int Appointment::get_PatientId() const { return patientid; }
+int Appointment::get_DoctorId() const { return doctorid; }
 
-string Appointment::get_Date() const { return info.date; }
-string Appointment::get_Time() const { return info.time; }
-string Appointment::get_Status() const { return info.status; }
+std::string Appointment::get_Date() const { return date; }
+std::string Appointment::get_Time() const { return time; }
+
+Status Appointment::get_Status() const { return status; }
