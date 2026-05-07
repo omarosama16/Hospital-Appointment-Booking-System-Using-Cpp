@@ -8,19 +8,17 @@ enable_testing()
 
 find_package(GTest REQUIRED)
 
-# ================= SOURCE FILES =================
+# ================= SOURCE =================
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS src/*.cpp)
 list(FILTER SRC_FILES EXCLUDE REGEX ".*/Main\\.cpp$")
 
-# ================= CORE LIBRARY =================
 add_library(hospital_core ${SRC_FILES})
 
-# 🔥 مهم جدًا: include globally + for all dependents
+ 
 target_include_directories(hospital_core PUBLIC
-    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/include
 )
 
-# ================= MAIN APP =================
 add_executable(hospital_app src/Main.cpp)
 target_link_libraries(hospital_app hospital_core)
 
@@ -35,7 +33,7 @@ target_link_libraries(run_tests
 )
 
 target_include_directories(run_tests PUBLIC
-    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/include
 )
 
 add_test(NAME unit_tests COMMAND run_tests)
