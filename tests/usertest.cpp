@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "user.h"
+#include "system.h"
 
 TEST(UserTest, DefaultConstructor)
 {
