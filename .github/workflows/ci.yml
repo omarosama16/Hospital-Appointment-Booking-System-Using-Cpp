@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # ================= INSTALL DEPENDENCIES =================
+      # ================= DEPENDENCIES =================
       - name: Install dependencies
         run: |
           sudo apt update
@@ -49,9 +49,15 @@ jobs:
       - name: Generate coverage report
         run: |
           lcov --capture \
-            --directory . \
-            --output-file coverage.info \
-            --ignore-errors mismatch
+            --directory build \
+            --output-file coverage.info
+
+          lcov --remove coverage.info \
+            '/usr/*' \
+            'tests/*' \
+            --output-file coverage.info
+
+          lcov --list coverage.info
 
       # ================= SONARCLOUD =================
       - name: SonarCloud Scan
@@ -67,3 +73,4 @@ jobs:
             -Dsonar.tests=tests
             -Dsonar.cfamily.compile-commands=build/compile_commands.json
             -Dsonar.coverageReportPaths=coverage.info
+            -Dsonar.cfamily.gcov.reportsPath=.
