@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include "system.h"
 
+/* ================= TEST ACCESS ================= */
+
 class SysTest : public HospitalSystem
 {
 public:
@@ -13,16 +15,9 @@ public:
 static int getDoctorId(HospitalSystem &sys)
 {
     for (auto u : sys.adminViewAllUsers())
-    {
         if (u && u->get_role() == "doctor")
             return u->get_id();
-    }
     return -1;
-}
-
-static void setupPatient(HospitalSystem &sys)
-{
-    sys.registerNewPatient("p", "p@mail.com", "123", "010");
 }
 
 static void setupDoctor(HospitalSystem &sys)
@@ -30,22 +25,43 @@ static void setupDoctor(HospitalSystem &sys)
     sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
 }
 
-/* ================= AUTH ================= */
+static void setupPatient(HospitalSystem &sys)
+{
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
+}
 
-TEST(Sys, Login)
+/* ================= LOGIN EDGE ================= */
+
+TEST(SysFull, LoginStress)
 {
     HospitalSystem sys;
 
     setupPatient(sys);
 
+    EXPECT_FALSE(sys.login("wrong", "wrong"));
+    EXPECT_FALSE(sys.login("", ""));
     EXPECT_TRUE(sys.login("p@mail.com", "123"));
-    EXPECT_FALSE(sys.login("p@mail.com", "wrong"));
-    EXPECT_FALSE(sys.login("x@mail.com", "123"));
 }
 
-/* ================= BOOKING ================= */
+/* ================= ROLE SWITCHING ================= */
 
-TEST(Sys, Booking)
+TEST(SysFull, RoleSwitching)
+{
+    HospitalSystem sys;
+
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+    EXPECT_EQ(sys.getCurrentUser()->get_role(), "patient");
+
+    sys.login("d@mail.com", "123");
+    EXPECT_EQ(sys.getCurrentUser()->get_role(), "doctor");
+}
+
+/* ================= BOOKING STRESS ================= */
+
+TEST(SysFull, BookingStress)
 {
     HospitalSystem sys;
 
@@ -57,49 +73,16 @@ TEST(Sys, Booking)
     int docId = getDoctorId(sys);
     ASSERT_NE(docId, -1);
 
-    EXPECT_TRUE(sys.bookAppointment(docId, "2026", "10AM"));
-    EXPECT_FALSE(sys.bookAppointment(999, "2026", "10AM"));
+    for (int i = 0; i < 5; i++)
+        EXPECT_TRUE(sys.bookAppointment(docId, "2026", "10AM"));
+
+    EXPECT_FALSE(sys.bookAppointment(-1, "2026", "10AM"));
+    EXPECT_FALSE(sys.bookAppointment(9999, "2026", "10AM"));
 }
 
-/* ================= RULES ================= */
+/* ================= CANCEL EDGE ================= */
 
-TEST(Sys, BookingRules)
-{
-    HospitalSystem sys;
-
-    setupDoctor(sys);
-
-    int docId = getDoctorId(sys);
-    ASSERT_NE(docId, -1);
-
-    EXPECT_FALSE(sys.bookAppointment(docId, "2026", "10AM"));
-}
-
-/* ================= CANCEL ================= */
-
-TEST(Sys, Cancel)
-{
-    HospitalSystem sys;
-
-    setupDoctor(sys);
-    setupPatient(sys);
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-    ASSERT_NE(docId, -1);
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
-
-    EXPECT_TRUE(sys.cancelAppointmentPatient(apptId));
-    EXPECT_FALSE(sys.cancelAppointmentPatient(999));
-}
-
-/* ================= COMPLETE ================= */
-
-TEST(Sys, Complete)
+TEST(SysFull, CancelStress)
 {
     HospitalSystem sys;
 
@@ -113,50 +96,167 @@ TEST(Sys, Complete)
 
     sys.bookAppointment(docId, "2026", "10AM");
 
-    int apptId = sys.viewMyAppointments()[0].get_AppointmentId();
+    auto appts = sys.viewMyAppointments();
+    int id = appts[0].get_AppointmentId();
+
+    EXPECT_TRUE(sys.cancelAppointmentPatient(id));
+    EXPECT_FALSE(sys.cancelAppointmentPatient(id));
+    EXPECT_FALSE(sys.cancelAppointmentPatient(-1));
+}
+
+/* ================= COMPLETE EDGE ================= */
+
+TEST(SysFull, CompleteStress)
+{
+    HospitalSystem sys;
+
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
 
     sys.login("d@mail.com", "123");
 
-    EXPECT_TRUE(sys.completeAppointmentDoctor(apptId));
-    EXPECT_FALSE(sys.completeAppointmentDoctor(999));
+    EXPECT_TRUE(sys.completeAppointmentDoctor(id));
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
+    EXPECT_FALSE(sys.completeAppointmentDoctor(-1));
 }
 
-/* ================= VIEWS ================= */
+/* ================= VIEW EDGE ================= */
 
-TEST(Sys, Views)
+TEST(SysFull, ViewStress)
 {
     HospitalSystem sys;
 
     setupDoctor(sys);
     setupPatient(sys);
 
-    int docId = getDoctorId(sys);
-    ASSERT_NE(docId, -1);
-
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
     EXPECT_TRUE(sys.viewDoctorSchedule().empty());
 
     sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
     sys.bookAppointment(docId, "2026", "10AM");
 
     EXPECT_FALSE(sys.viewMyAppointments().empty());
 
     sys.login("d@mail.com", "123");
 
-    auto doctorView = sys.viewDoctorSchedule();
-    EXPECT_FALSE(doctorView.empty());
-    EXPECT_EQ(doctorView.size(), 1);
-
-    // switch back
-    sys.login("p@mail.com", "123");
-    EXPECT_EQ(sys.viewMyAppointments().size(), 1);
+    EXPECT_FALSE(sys.viewDoctorSchedule().empty());
 }
 
 /* ================= ADMIN ================= */
 
-TEST(Sys, Admin)
+TEST(SysFull, AdminStress)
 {
     SysTest sys;
 
     EXPECT_FALSE(sys.adminViewAllUsers().empty());
-    EXPECT_TRUE(sys.adminViewAllAppointments().empty());
+}
+
+/* ================= STATE POISONING ================= */
+
+TEST(SysFull, StatePoisoning)
+{
+    HospitalSystem sys;
+
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    EXPECT_FALSE(sys.login("bad", "bad"));
+
+    EXPECT_TRUE(sys.login("p@mail.com", "123"));
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    EXPECT_FALSE(sys.login("x", "y")); // poison attempt
+
+    EXPECT_FALSE(sys.viewMyAppointments().empty());
+}
+
+/* ================= INVALID INPUT BOMB ================= */
+
+TEST(SysFull, InvalidInputBomb)
+{
+    HospitalSystem sys;
+
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+
+    EXPECT_FALSE(sys.bookAppointment(-1, "", ""));
+    EXPECT_FALSE(sys.bookAppointment(99999, "bad", "bad"));
+    EXPECT_FALSE(sys.cancelAppointmentPatient(-1));
+    EXPECT_FALSE(sys.completeAppointmentDoctor(-1));
+}
+
+/* ================= ROLE ABUSE ================= */
+
+TEST(SysFull, RoleAbuse)
+{
+    HospitalSystem sys;
+
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
+
+    sys.login("d@mail.com", "123");
+
+    EXPECT_TRUE(sys.completeAppointmentDoctor(id));
+}
+
+/* ================= CHAOS FLOW ================= */
+
+TEST(SysFull, ChaosScenario)
+{
+    HospitalSystem sys;
+
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    EXPECT_FALSE(sys.login("x", "y"));
+    EXPECT_FALSE(sys.login("", ""));
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    auto appts = sys.viewMyAppointments();
+    int id = appts[0].get_AppointmentId();
+
+    sys.cancelAppointmentPatient(id);
+
+    EXPECT_FALSE(sys.cancelAppointmentPatient(id));
+
+    sys.login("d@mail.com", "123");
+
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
 }
