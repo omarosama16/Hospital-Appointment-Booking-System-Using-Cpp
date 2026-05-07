@@ -147,7 +147,7 @@ std::vector<Appointment> HospitalSystem::viewDoctorSchedule()
 
 bool HospitalSystem::completeAppointmentDoctor(int id)
 {
-    if (!currentUser)
+    if (!currentUser || currentUser->get_role() != "doctor")
         return false;
 
     for (auto &a : masterSchedule)
@@ -155,6 +155,10 @@ bool HospitalSystem::completeAppointmentDoctor(int id)
         if (a.get_AppointmentId() == id &&
             a.get_DoctorId() == currentUser->get_id())
         {
+
+            if (a.get_Status() != "Scheduled")
+                return false;
+
             a.complete();
             return true;
         }
