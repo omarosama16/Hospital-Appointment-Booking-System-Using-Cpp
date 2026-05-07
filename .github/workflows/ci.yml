@@ -32,7 +32,7 @@ jobs:
         run: |
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_FLAGS="--coverage" \
+            -DCMAKE_CXX_FLAGS="--coverage -O0 -g" \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       # ================= BUILD =================
@@ -50,7 +50,8 @@ jobs:
         run: |
           lcov --capture \
             --directory build \
-            --output-file coverage.info
+            --output-file coverage.info \
+            --ignore-errors mismatch
 
           lcov --remove coverage.info \
             '/usr/*' \
