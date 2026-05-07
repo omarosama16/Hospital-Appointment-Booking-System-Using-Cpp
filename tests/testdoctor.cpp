@@ -9,34 +9,37 @@ TEST(DoctorTest, Constructor)
     EXPECT_EQ(d.getSpecialization(), "Cardiology");
 }
 
-TEST(DoctorTest, AvailabilityEmpty)
+TEST(DoctorTest, Availability)
 {
     Doctor d(1, "Omar", "o@test.com", "1234", "Cardiology");
 
     EXPECT_TRUE(d.getAvailability().empty());
-}
-
-TEST(DoctorTest, AddAvailabilityMultiple)
-{
-    Doctor d(1, "Omar", "o@test.com", "1234", "Cardiology");
 
     d.addAvailability("10AM");
     d.addAvailability("11AM");
-    d.addAvailability("12PM");
 
-    EXPECT_EQ(d.getAvailability().size(), 3);
+    EXPECT_EQ(d.getAvailability().size(), 2);
+
+    d.clearAvailability();
+
+    EXPECT_TRUE(d.getAvailability().empty());
 }
 
-TEST(DoctorTest, ClearAvailabilityEdge)
+TEST(DoctorTest, ClearEmptyAvailability)
+{
+    Doctor d(1, "Omar", "o@test.com", "1234", "Cardiology");
+
+    EXPECT_NO_THROW(d.clearAvailability());
+
+    EXPECT_TRUE(d.getAvailability().empty());
+}
+
+TEST(DoctorTest, MultipleAvailabilityEntries)
 {
     Doctor d(1, "Omar", "o@test.com", "1234", "Cardiology");
 
     d.addAvailability("10AM");
-    d.clearAvailability();
+    d.addAvailability("10AM");
 
-    EXPECT_TRUE(d.getAvailability().empty());
-
-    // clearing empty again (edge branch)
-    d.clearAvailability();
-    EXPECT_TRUE(d.getAvailability().empty());
+    EXPECT_EQ(d.getAvailability().size(), 2);
 }

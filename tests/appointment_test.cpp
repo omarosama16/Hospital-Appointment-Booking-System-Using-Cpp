@@ -9,50 +9,50 @@ TEST(AppointmentTest, DefaultConstructor)
     EXPECT_EQ(a.get_Status(), "");
 }
 
-TEST(AppointmentTest, FullConstructor)
+TEST(AppointmentTest, ParameterizedConstructor)
 {
     Appointment a(1, 2, 3, "p", "d", "2026", "10AM", "Scheduled");
 
+    EXPECT_EQ(a.get_AppointmentId(), 1);
     EXPECT_EQ(a.get_PatientId(), 2);
     EXPECT_EQ(a.get_DoctorId(), 3);
     EXPECT_EQ(a.get_Status(), "Scheduled");
 }
 
-TEST(AppointmentTest, CancelState)
+TEST(AppointmentTest, CancelAndComplete)
 {
     Appointment a(1, 1, 1, "p", "d", "2026", "10AM", "Scheduled");
 
     a.cancel();
+
     EXPECT_EQ(a.get_Status(), "Cancelled");
 
-    // cancel again (edge)
-    a.cancel();
+    a.complete();
+
     EXPECT_EQ(a.get_Status(), "Cancelled");
 }
 
-TEST(AppointmentTest, CompleteNormalFlow)
+TEST(AppointmentTest, CompleteScheduledAppointment)
 {
     Appointment a(1, 1, 1, "p", "d", "2026", "10AM", "Scheduled");
 
     a.complete();
+
     EXPECT_EQ(a.get_Status(), "Completed");
 }
 
-TEST(AppointmentTest, CompleteAfterCancelBlocked)
-{
-    Appointment a(1, 1, 1, "p", "d", "2026", "10AM", "Scheduled");
-
-    a.cancel();
-    a.complete(); // must stay cancelled
-    EXPECT_EQ(a.get_Status(), "Cancelled");
-}
-
-TEST(AppointmentTest, PrintCoverage)
+TEST(AppointmentTest, PrintRowDoesNotCrash)
 {
     Appointment a(1, 1, 1, "p", "d", "2026", "10AM", "Scheduled");
 
     EXPECT_NO_THROW(a.print_row());
+}
+
+TEST(AppointmentTest, PrintRowAfterCancel)
+{
+    Appointment a(1, 1, 1, "p", "d", "2026", "10AM", "Scheduled");
 
     a.cancel();
+
     EXPECT_NO_THROW(a.print_row());
 }
