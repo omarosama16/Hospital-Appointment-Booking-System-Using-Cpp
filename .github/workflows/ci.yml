@@ -21,7 +21,7 @@ jobs:
           sudo apt update
           sudo apt install -y cmake g++ gcovr lcov libgtest-dev
 
-      # ================= BUILD =================
+      # ================= CONFIGURE =================
       - name: Configure CMake
         run: |
           cmake -S . -B build \
@@ -29,21 +29,24 @@ jobs:
             -DCMAKE_CXX_FLAGS="--coverage" \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
+      # ================= BUILD =================
       - name: Build project
         run: cmake --build build --parallel
 
       # ================= TEST =================
+      - name: Reset coverage counters
+        run: lcov --directory build --zerocounters
+
       - name: Run tests
         run: ctest --test-dir build --output-on-failure
 
-      # ================= COVERAGE (FIXED) =================
-      - name: Generate coverage (LCOV → SONAR FORMAT FIXED)
+      # ================= COVERAGE =================
+      - name: Generate LCOV coverage
         run: |
           lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
           lcov --remove coverage.info '/usr/*' '*/tests/*' --output-file coverage.info
 
-      # Convert to XML (Sonar accepts XML better)
-      - name: Convert coverage to XML
+      - name: Generate XML coverage (SonarCloud)
         run: |
           gcovr -r . --xml-pretty -o coverage.xml
 
@@ -60,4 +63,4 @@ jobs:
             -Dsonar.sources=src
             -Dsonar.tests=tests
             -Dsonar.cfamily.compile-commands=build/compile_commands.json
-            -Dsonar.coverageReportPaths=coverage.info
+            -Dsonar.coverageReportPaths=coverage.xml
