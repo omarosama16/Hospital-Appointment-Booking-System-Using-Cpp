@@ -1,30 +1,34 @@
-#include "user.h"
+#ifndef USER_H
+#define USER_H
+#include <string>
 
-User::User()
+class User
 {
-    id = 0;
-    name = "";
-    email = "";
-    password = "";
-    role = "";
-}
+protected:
+    int id;
+    std::string name;
+    std::string email;
+    std::string password;
+    std::string role;
 
-User::User(int i, const std::string& n, const std::string& e, const std::string& p, const std::string& r)
-    : id(i), name(n), email(e), password(p), role(r) {}
+public:
+    User();
+    User(int i, const std::string& n, const std::string& e, const std::string& p, const std::string& r);
+    virtual ~User() {}
 
-void User::set_id(int i) { id = i; }
-void User::set_name(const std::string& n) { name = n; }
-void User::set_password(const std::string& p) { password = p; }
-void User::set_role(const std::string& r) { role = r; }
-void User::set_email(const std::string& e) { email = e; }
+    void set_id(int i);
+    void set_email(const std::string& e);
+    void set_password(const std::string& p);
+    void set_role(const std::string& r);
+    void set_name(const std::string& n);
 
-int User::get_id() const { return id; }
-std::string User::get_name() const { return name; }
-std::string User::get_email() const { return email; }
-std::string User::get_password() const { return password; }
-std::string User::get_role() const { return role; }
+    int get_id() const;
+    std::string get_email() const;
+    std::string get_password() const;
+    std::string get_role() const;
+    std::string get_name() const;
 
-bool User::Authenticate(const std::string& e, const std::string& p)
-{
-    return email == e && password == p;
-}
+    virtual bool Authenticate(const std::string& email, const std::string& password);
+};
+
+#endif
