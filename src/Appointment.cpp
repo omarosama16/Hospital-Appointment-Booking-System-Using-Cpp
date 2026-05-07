@@ -17,7 +17,13 @@ Appointment::Appointment(int a, int p, int d, std::string pa, std::string doc,
 }
 
 void Appointment::cancel() { status = "Cancelled"; }
-void Appointment::complete() { status = "Completed"; }
+void Appointment::complete()
+{
+    if (status != "Cancelled")
+    {
+        status = "Completed";
+    }
+}
 
 void Appointment::print_row() const
 {
