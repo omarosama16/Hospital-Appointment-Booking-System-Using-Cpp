@@ -1,1 +1,13 @@
+# Build folders
+build/
+CMakeFiles/
+CMakeCache.txt
+
+# Compiled files
+*.o
+*.exe
+*.out
+
+# IDE files
 .vscode/
+.idea/
