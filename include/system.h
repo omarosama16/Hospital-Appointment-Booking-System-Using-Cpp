@@ -2,11 +2,12 @@
 
 #include <vector>
 #include <string>
+#include <string_view>
 #include <memory>
 #include "user.h"
 #include "Appointment.h"
 
-class Doctor; // forward declaration
+class Doctor;
 
 class HospitalSystem
 {
@@ -16,15 +17,15 @@ public:
 
     User *getCurrentUser() const;
 
-    bool login(std::string e, std::string p);
+    bool login(std::string_view e, std::string_view p);
 
-    void registerNewPatient(std::string n, std::string e,
-                            std::string p, std::string phone);
+    void registerNewPatient(std::string_view n, std::string_view e,
+                            std::string_view p, std::string_view phone);
 
-    void registerNewDoctor(std::string n, std::string e,
-                           std::string p, std::string s);
+    void registerNewDoctor(std::string_view n, std::string_view e,
+                           std::string_view p, std::string_view s);
 
-    bool bookAppointment(int docId, std::string date, std::string time);
+    bool bookAppointment(int docId, std::string_view date, std::string_view time);
     bool cancelAppointmentPatient(int id);
     bool completeAppointmentDoctor(int id);
 
@@ -36,7 +37,6 @@ public:
     std::vector<User *> adminViewAllUsers();
 
 private:
-    // unique_ptr gives automatic memory management; no manual delete needed
     std::vector<std::unique_ptr<User>> allUsers;
     std::vector<Appointment>           masterSchedule;
 
