@@ -29,12 +29,11 @@ public:
     bool cancelAppointmentPatient(int id);
     bool completeAppointmentDoctor(int id);
 
-    std::vector<Appointment> viewMyAppointments();
-    std::vector<Appointment> viewDoctorSchedule();
-    std::vector<Appointment> adminViewAllAppointments();
-
-    // Returns non-owning raw pointers — callers must not delete them
-    std::vector<User *> adminViewAllUsers();
+    // Fix: const — these methods only read state, never modify it
+    std::vector<Appointment> viewMyAppointments()       const;
+    std::vector<Appointment> viewDoctorSchedule()       const;
+    std::vector<Appointment> adminViewAllAppointments() const;
+    std::vector<User *>      adminViewAllUsers()        const;
 
 private:
     std::vector<std::unique_ptr<User>> allUsers;
