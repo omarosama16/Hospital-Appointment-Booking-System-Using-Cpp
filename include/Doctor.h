@@ -1,24 +1,23 @@
-#ifndef DOCTOR_H
-#define DOCTOR_H
+#pragma once
 
 #include "user.h"
+#include <string>
+#include <string_view>
 #include <vector>
 
 class Doctor : public User
 {
-private:
-    std::string specialization;
-    std::vector<std::string> availability;
-
 public:
-    Doctor(int id, std::string name, std::string email, std::string password, std::string specialization);
+    Doctor(int i, std::string_view n, std::string_view e,
+           std::string_view p, std::string_view s);
 
-    std::string getSpecialization() const;
+    std::string              getSpecialization() const;
+    std::vector<std::string> getAvailability()   const;
 
-    std::vector<std::string> getAvailability() const;
-
-    void addAvailability(std::string time);
+    void addAvailability(std::string_view time);
     void clearAvailability();
-};
 
-#endif
+private:
+    std::string              specialization;
+    std::vector<std::string> availability;
+};
