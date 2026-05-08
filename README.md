@@ -36,7 +36,7 @@ This model was chosen because the project requirements were clear and stable.
 - Lojian Mohammed
 - Hana Waleed
 - Ahmed Mohamed
-- Nour Eldin 
+- Nour Eldin Haitham
 - Mohamed Salah
 
 
