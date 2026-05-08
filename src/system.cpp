@@ -3,6 +3,7 @@
 #include "Patient.h"
 #include "admin.h"
 #include <memory>
+#include <algorithm>
 
 HospitalSystem::HospitalSystem()
 {
@@ -10,7 +11,6 @@ HospitalSystem::HospitalSystem()
     nextApptId = 1;
     currentUser = nullptr;
 
-    // FIX Line 13: extracted assignment from expression
     const int adminId = nextUserId;
     nextUserId++;
     allUsers.push_back(std::make_unique<Admin>(adminId, "admin", "admin@mail.com", "admin123"));
@@ -35,15 +35,18 @@ Doctor *HospitalSystem::findDoctorById(int id)
     return nullptr;
 }
 
+// FIX Line 40: replaced range for-loop with std::find_if
 bool HospitalSystem::login(std::string_view e, std::string_view p)
 {
-    for (const auto &u : allUsers)
+    auto it = std::find_if(allUsers.begin(), allUsers.end(),
+        [&](const std::unique_ptr<User> &u) {
+            return u->Authenticate(e, p);
+        });
+
+    if (it != allUsers.end())
     {
-        if (u->Authenticate(e, p))
-        {
-            currentUser = u.get();
-            return true;
-        }
+        currentUser = it->get();
+        return true;
     }
     return false;
 }
@@ -53,7 +56,6 @@ void HospitalSystem::registerNewPatient(std::string_view n,
                                         std::string_view p,
                                         std::string_view phone)
 {
-    // FIX: extracted assignment from expression
     const int patientId = nextUserId;
     nextUserId++;
     allUsers.push_back(std::make_unique<Patient>(patientId, n, e, p, phone));
@@ -64,7 +66,6 @@ void HospitalSystem::registerNewDoctor(std::string_view n,
                                        std::string_view p,
                                        std::string_view s)
 {
-    // FIX: extracted assignment from expression
     const int doctorId = nextUserId;
     nextUserId++;
     auto d = std::make_unique<Doctor>(doctorId, n, e, p, s);
@@ -86,7 +87,6 @@ bool HospitalSystem::bookAppointment(int docId,
     if (!d)
         return false;
 
-    // FIX: extracted assignment from expression
     const int apptId = nextApptId;
     nextApptId++;
     AppointmentInfo info{currentUser->get_name(), d->get_name(),
