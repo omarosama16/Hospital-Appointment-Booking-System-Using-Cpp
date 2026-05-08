@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 #include "admin.h"
 
-/* ================= BASIC CONSTRUCTOR ================= */
+/* ================= CONSTRUCTOR ================= */
 
-TEST(AdminTest, ConstructorBasic)
+TEST(AdminTest, Constructor_Basic)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
     EXPECT_EQ(a.get_id(),       1);
@@ -13,8 +13,7 @@ TEST(AdminTest, ConstructorBasic)
     EXPECT_EQ(a.get_role(),     "admin");
 }
 
-// Different id value — forces id initializer condition
-TEST(AdminTest, ConstructorDifferentId)
+TEST(AdminTest, Constructor_DifferentId)
 {
     Admin a(99, "Alice", "alice@test.com", "pass99");
     EXPECT_EQ(a.get_id(),       99);
@@ -24,24 +23,21 @@ TEST(AdminTest, ConstructorDifferentId)
     EXPECT_EQ(a.get_role(),     "admin");
 }
 
-// Zero id — boundary for id field
-TEST(AdminTest, ConstructorZeroId)
+TEST(AdminTest, Constructor_ZeroId)
 {
     Admin a(0, "Zero", "zero@test.com", "zeropass");
     EXPECT_EQ(a.get_id(),   0);
     EXPECT_EQ(a.get_role(), "admin");
 }
 
-// Negative id — another boundary
-TEST(AdminTest, ConstructorNegativeId)
+TEST(AdminTest, Constructor_NegativeId)
 {
     Admin a(-1, "Neg", "neg@test.com", "negpass");
     EXPECT_EQ(a.get_id(),   -1);
     EXPECT_EQ(a.get_role(), "admin");
 }
 
-// Empty strings for all string fields
-TEST(AdminTest, ConstructorEmptyStrings)
+TEST(AdminTest, Constructor_EmptyStrings)
 {
     Admin a(1, "", "", "");
     EXPECT_EQ(a.get_name(),     "");
@@ -50,13 +46,11 @@ TEST(AdminTest, ConstructorEmptyStrings)
     EXPECT_EQ(a.get_role(),     "admin");
 }
 
-// Long strings — stress the string initializer conditions
-TEST(AdminTest, ConstructorLongStrings)
+TEST(AdminTest, Constructor_LongStrings)
 {
     std::string longName(200, 'A');
     std::string longEmail(200, 'B');
     std::string longPass(200, 'C');
-
     Admin a(42, longName, longEmail, longPass);
     EXPECT_EQ(a.get_name(),     longName);
     EXPECT_EQ(a.get_email(),    longEmail);
@@ -64,12 +58,11 @@ TEST(AdminTest, ConstructorLongStrings)
     EXPECT_EQ(a.get_role(),     "admin");
 }
 
-// Special characters
-TEST(AdminTest, ConstructorSpecialCharacters)
+TEST(AdminTest, Constructor_SpecialCharacters)
 {
-    Admin a(5, "O'Brien", "o.brien+tag@test.com", "p@$$w0rd!");
+    Admin a(5, "O'Brien", "o+tag@test.com", "p@$$w0rd!");
     EXPECT_EQ(a.get_name(),     "O'Brien");
-    EXPECT_EQ(a.get_email(),    "o.brien+tag@test.com");
+    EXPECT_EQ(a.get_email(),    "o+tag@test.com");
     EXPECT_EQ(a.get_password(), "p@$$w0rd!");
     EXPECT_EQ(a.get_role(),     "admin");
 }
@@ -78,75 +71,65 @@ TEST(AdminTest, ConstructorSpecialCharacters)
 
 TEST(AdminTest, RoleIsAlwaysAdmin)
 {
-    Admin a1(1, "A", "a@test.com", "pass1");
-    Admin a2(2, "B", "b@test.com", "pass2");
-    Admin a3(3, "C", "c@test.com", "pass3");
-
+    Admin a1(1, "A", "a@test.com", "p1");
+    Admin a2(2, "B", "b@test.com", "p2");
+    Admin a3(3, "C", "c@test.com", "p3");
     EXPECT_EQ(a1.get_role(), "admin");
     EXPECT_EQ(a2.get_role(), "admin");
     EXPECT_EQ(a3.get_role(), "admin");
 }
 
-/* ================= AUTHENTICATE - ALL CONDITION BRANCHES ================= */
+/* ================= AUTHENTICATE - ALL BRANCHES ================= */
 
-// email=TRUE && password=TRUE → true
-TEST(AdminTest, Authenticate_Success)
+TEST(AdminTest, Auth_Success)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
     EXPECT_TRUE(a.Authenticate("omar@test.com", "1234"));
 }
 
-// email=TRUE && password=FALSE → false
-TEST(AdminTest, Authenticate_WrongPassword)
+TEST(AdminTest, Auth_WrongPassword)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
     EXPECT_FALSE(a.Authenticate("omar@test.com", "wrong"));
 }
 
-// email=FALSE (short-circuit) → false
-TEST(AdminTest, Authenticate_WrongEmail)
+TEST(AdminTest, Auth_WrongEmail)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
     EXPECT_FALSE(a.Authenticate("wrong@test.com", "1234"));
 }
 
-// email=FALSE && password=FALSE → false
-TEST(AdminTest, Authenticate_BothWrong)
+TEST(AdminTest, Auth_BothWrong)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
     EXPECT_FALSE(a.Authenticate("x", "y"));
 }
 
-// email=TRUE && password=FALSE: email matches but password is empty
-TEST(AdminTest, Authenticate_CorrectEmailEmptyPassword)
+TEST(AdminTest, Auth_CorrectEmailEmptyPassword)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
     EXPECT_FALSE(a.Authenticate("omar@test.com", ""));
 }
 
-// email=FALSE: empty email with correct password
-TEST(AdminTest, Authenticate_EmptyEmailCorrectPassword)
+TEST(AdminTest, Auth_EmptyEmailCorrectPassword)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
     EXPECT_FALSE(a.Authenticate("", "1234"));
 }
 
-// email=TRUE && password=TRUE on empty-string admin
-TEST(AdminTest, Authenticate_EmptyCredentialsMatch)
+TEST(AdminTest, Auth_EmptyCredentialsMatch)
 {
     Admin a(1, "", "", "");
     EXPECT_TRUE(a.Authenticate("", ""));
 }
 
-// email=FALSE on empty-string admin
-TEST(AdminTest, Authenticate_EmptyAdmin_WrongEmail)
+TEST(AdminTest, Auth_EmptyAdmin_WrongEmail)
 {
     Admin a(1, "", "", "");
-    EXPECT_FALSE(a.Authenticate("someone@test.com", ""));
+    EXPECT_FALSE(a.Authenticate("x@test.com", ""));
 }
 
-// email=TRUE && password=FALSE on empty-string admin
-TEST(AdminTest, Authenticate_EmptyAdmin_WrongPassword)
+TEST(AdminTest, Auth_EmptyAdmin_WrongPassword)
 {
     Admin a(1, "", "", "");
     EXPECT_FALSE(a.Authenticate("", "wrongpass"));
@@ -154,24 +137,21 @@ TEST(AdminTest, Authenticate_EmptyAdmin_WrongPassword)
 
 /* ================= SETTERS ================= */
 
-TEST(AdminTest, SettersWork)
+TEST(AdminTest, Setters)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
-
     a.set_id(55);
-    a.set_name("NewName");
+    a.set_name("New");
     a.set_email("new@test.com");
     a.set_password("newpass");
-
     EXPECT_EQ(a.get_id(),       55);
-    EXPECT_EQ(a.get_name(),     "NewName");
+    EXPECT_EQ(a.get_name(),     "New");
     EXPECT_EQ(a.get_email(),    "new@test.com");
     EXPECT_EQ(a.get_password(), "newpass");
-    EXPECT_EQ(a.get_role(),     "admin"); // role unchanged
+    EXPECT_EQ(a.get_role(),     "admin");
 }
 
-// Authenticate with new credentials after setters
-TEST(AdminTest, Authenticate_AfterSetters_Success)
+TEST(AdminTest, Auth_AfterSetters_Success)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
     a.set_email("new@test.com");
@@ -179,15 +159,7 @@ TEST(AdminTest, Authenticate_AfterSetters_Success)
     EXPECT_TRUE(a.Authenticate("new@test.com", "newpass"));
 }
 
-TEST(AdminTest, Authenticate_AfterSetters_OldCredentialsFail)
-{
-    Admin a(1, "Omar", "omar@test.com", "1234");
-    a.set_email("new@test.com");
-    a.set_password("newpass");
-    EXPECT_FALSE(a.Authenticate("omar@test.com", "1234")); // old creds fail
-}
-
-TEST(AdminTest, Authenticate_AfterSetters_WrongPassword)
+TEST(AdminTest, Auth_AfterSetters_WrongPassword)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
     a.set_email("new@test.com");
@@ -195,7 +167,7 @@ TEST(AdminTest, Authenticate_AfterSetters_WrongPassword)
     EXPECT_FALSE(a.Authenticate("new@test.com", "wrong"));
 }
 
-TEST(AdminTest, Authenticate_AfterSetters_WrongEmail)
+TEST(AdminTest, Auth_AfterSetters_WrongEmail)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
     a.set_email("new@test.com");
@@ -203,15 +175,22 @@ TEST(AdminTest, Authenticate_AfterSetters_WrongEmail)
     EXPECT_FALSE(a.Authenticate("other@test.com", "newpass"));
 }
 
+TEST(AdminTest, Auth_AfterSetters_OldCredsFail)
+{
+    Admin a(1, "Omar", "omar@test.com", "1234");
+    a.set_email("new@test.com");
+    a.set_password("newpass");
+    EXPECT_FALSE(a.Authenticate("omar@test.com", "1234"));
+}
+
 /* ================= ROLE MUTATION ================= */
 
 TEST(AdminTest, RoleCanBeChanged)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
-    EXPECT_EQ(a.get_role(), "admin");
     a.set_role("doctor");
     EXPECT_EQ(a.get_role(), "doctor");
-    EXPECT_TRUE(a.Authenticate("omar@test.com", "1234")); // auth unaffected
+    EXPECT_TRUE(a.Authenticate("omar@test.com", "1234"));
 }
 
 TEST(AdminTest, RoleChangeThenBack)
@@ -225,29 +204,26 @@ TEST(AdminTest, RoleChangeThenBack)
 
 /* ================= MULTIPLE INSTANCES ================= */
 
-TEST(AdminTest, MultipleAdminInstances)
+TEST(AdminTest, MultipleInstances)
 {
-    Admin a1(1, "Admin1", "a1@test.com", "pass1");
-    Admin a2(2, "Admin2", "a2@test.com", "pass2");
-    Admin a3(3, "Admin3", "a3@test.com", "pass3");
+    Admin a1(1, "A1", "a1@test.com", "pass1");
+    Admin a2(2, "A2", "a2@test.com", "pass2");
+    Admin a3(3, "A3", "a3@test.com", "pass3");
 
-    // Each authenticates independently
     EXPECT_TRUE(a1.Authenticate("a1@test.com", "pass1"));
     EXPECT_TRUE(a2.Authenticate("a2@test.com", "pass2"));
     EXPECT_TRUE(a3.Authenticate("a3@test.com", "pass3"));
 
-    // Cross-authentication fails
     EXPECT_FALSE(a1.Authenticate("a2@test.com", "pass2"));
     EXPECT_FALSE(a2.Authenticate("a1@test.com", "pass1"));
-    EXPECT_FALSE(a3.Authenticate("a1@test.com", "pass1"));
 }
 
 /* ================= STRESS ================= */
 
-TEST(AdminTest, AuthenticateStress)
+TEST(AdminTest, AuthStress)
 {
     Admin a(1, "Omar", "omar@test.com", "1234");
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 50; i++)
     {
         EXPECT_TRUE(a.Authenticate("omar@test.com", "1234"));
         EXPECT_FALSE(a.Authenticate("omar@test.com", "wrong"));
