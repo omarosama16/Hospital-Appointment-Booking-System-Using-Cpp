@@ -33,7 +33,7 @@ This model was chosen because the project requirements were clear and stable.
 # CONTRIBUTERS: 
 - Habiba Amr 
 - Omar Osama
-- Lojian Mohammed
+- Lojain Mohamed
 - Hana Waleed
 - Ahmed Mohamed
 - Nour Eldin Hytham
