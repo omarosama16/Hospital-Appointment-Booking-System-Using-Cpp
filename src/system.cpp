@@ -35,15 +35,13 @@ Doctor *HospitalSystem::findDoctorById(int id)
     return nullptr;
 }
 
-// FIX Line 40: replaced range for-loop with std::find_if
+// FIX Line 46: moved "it" declaration into if init-statement
 bool HospitalSystem::login(std::string_view e, std::string_view p)
 {
-    auto it = std::find_if(allUsers.begin(), allUsers.end(),
-        [&](const std::unique_ptr<User> &u) {
-            return u->Authenticate(e, p);
-        });
-
-    if (it != allUsers.end())
+    if (auto it = std::find_if(allUsers.begin(), allUsers.end(),
+            [&](const std::unique_ptr<User> &u) {
+                return u->Authenticate(e, p);
+            }); it != allUsers.end())
     {
         currentUser = it->get();
         return true;
