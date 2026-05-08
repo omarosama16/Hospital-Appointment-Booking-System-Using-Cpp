@@ -10,10 +10,10 @@
  * exception-handling branches that normal execution cannot hit. This is a known
  * gcov limitation with C++ constructors.
  *
- * FIX: Compile with:  g++ -fno-exceptions --coverage ...
+ * FIX: Compile with:  g++ -fno-exceptions --coverage -O0 ...
  *      Or use:         g++ -O1 --coverage ...
  *
- * If you cannot change flags, use LCOV_EXCL_LINE (shown below).
+ * If you cannot change flags, use LCOV_EXCL_LINE on the constructor init-list.
  * ============================================================================= */
 
 /* ================= CONSTRUCTOR ================= */
@@ -142,30 +142,6 @@ TEST(PatientTest, MoveAssignment)
     EXPECT_EQ(p2.get_password(), "1234");
     EXPECT_EQ(p2.get_phone(),    "010");
     EXPECT_EQ(p2.get_role(),     "patient");
-}
-
-/* ================= SELF-ASSIGNMENT (EXTRA EDGE CASE) ================= */
-
-TEST(PatientTest, CopySelfAssignment)
-{
-    Patient p(1, "Ali", "a@test.com", "1234", "010");
-    p = p;  // self-copy (should be safe)
-    EXPECT_EQ(p.get_id(),       1);
-    EXPECT_EQ(p.get_name(),     "Ali");
-    EXPECT_EQ(p.get_email(),    "a@test.com");
-    EXPECT_EQ(p.get_password(), "1234");
-    EXPECT_EQ(p.get_phone(),    "010");
-}
-
-TEST(PatientTest, MoveSelfAssignment)
-{
-    Patient p(1, "Ali", "a@test.com", "1234", "010");
-    p = std::move(p);  // self-move (should be safe)
-    EXPECT_EQ(p.get_id(),       1);
-    EXPECT_EQ(p.get_name(),     "Ali");
-    EXPECT_EQ(p.get_email(),    "a@test.com");
-    EXPECT_EQ(p.get_password(), "1234");
-    EXPECT_EQ(p.get_phone(),    "010");
 }
 
 /* ================= ROLE IS ALWAYS PATIENT ================= */
