@@ -62,10 +62,3 @@ int         Appointment::get_DoctorId()      const { return doctorid; }
 std::string Appointment::get_Date()          const { return date; }
 std::string Appointment::get_Time()          const { return time; }
 Status      Appointment::get_Status()        const { return status; }
-
-
-
-
-
-
-
