@@ -1,11 +1,12 @@
 #include <gtest/gtest.h>
 #include "Appointment.h"
 
-/* ===================== DEFAULT ===================== */
+/* ================= DEFAULT ================= */
 
-TEST(AppointmentTest, DefaultConstructorFullState)
+TEST(AppointmentTest, DefaultConstructor)
 {
     Appointment a;
+
     EXPECT_EQ(a.get_AppointmentId(), 0);
     EXPECT_EQ(a.get_PatientId(), 0);
     EXPECT_EQ(a.get_DoctorId(), 0);
@@ -14,210 +15,163 @@ TEST(AppointmentTest, DefaultConstructorFullState)
     EXPECT_EQ(a.get_Status(), Status::Scheduled);
 }
 
-/* ===================== PARAMETERIZED ===================== */
+/* ================= CONSTRUCTOR STATES ================= */
 
-TEST(AppointmentTest, ParameterizedConstructor)
+TEST(AppointmentTest, ConstructorAllStates)
 {
     AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 2, 3, info, Status::Scheduled);
-    EXPECT_EQ(a.get_AppointmentId(), 1);
-    EXPECT_EQ(a.get_PatientId(), 2);
-    EXPECT_EQ(a.get_DoctorId(), 3);
-    EXPECT_EQ(a.get_Date(), "2026");
-    EXPECT_EQ(a.get_Time(), "10AM");
-    EXPECT_EQ(a.get_Status(), Status::Scheduled);
+
+    Appointment a1(1, 1, 1, info, Status::Scheduled);
+    EXPECT_EQ(a1.get_Status(), Status::Scheduled);
+
+    Appointment a2(2, 2, 2, info, Status::Cancelled);
+    EXPECT_EQ(a2.get_Status(), Status::Cancelled);
+
+    Appointment a3(3, 3, 3, info, Status::Completed);
+    EXPECT_EQ(a3.get_Status(), Status::Completed);
 }
 
-// FIX: covers parameterized constructor with Cancelled status directly
-TEST(AppointmentTest, ParameterizedConstructorCancelled)
+/* ================= CANCEL ================= */
+
+TEST(AppointmentTest, CancelFromScheduled)
 {
     AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 2, 3, info, Status::Cancelled);
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
-}
 
-// FIX: covers parameterized constructor with Completed status directly
-TEST(AppointmentTest, ParameterizedConstructorCompleted)
-{
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 2, 3, info, Status::Completed);
-    EXPECT_EQ(a.get_Status(), Status::Completed);
-}
-
-/* ===================== CANCEL ===================== */
-
-// covers if(status == Scheduled) true branch in cancel()
-TEST(AppointmentTest, CancelScheduled)
-{
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
     Appointment a(1, 1, 1, info, Status::Scheduled);
     a.cancel();
+
     EXPECT_EQ(a.get_Status(), Status::Cancelled);
 }
 
-// covers false branch of if(status == Scheduled) in cancel() — status is Cancelled
-TEST(AppointmentTest, CancelWhenAlreadyCancelled)
+TEST(AppointmentTest, CancelFromCancelled)
 {
     AppointmentInfo info{"p", "d", "2026", "10AM"};
+
     Appointment a(1, 1, 1, info, Status::Cancelled);
-    a.cancel();
+    a.cancel(); // no change
+
     EXPECT_EQ(a.get_Status(), Status::Cancelled);
 }
 
-// covers false branch of if(status == Scheduled) in cancel() — status is Completed
-TEST(AppointmentTest, CancelWhenAlreadyCompleted)
+TEST(AppointmentTest, CancelFromCompleted)
 {
     AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.complete();
-    a.cancel();
-    EXPECT_EQ(a.get_Status(), Status::Completed);
-}
 
-// FIX: directly constructed Completed — cancel() false branch without going through complete()
-TEST(AppointmentTest, CancelDirectlyCompletedStatus)
-{
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
     Appointment a(1, 1, 1, info, Status::Completed);
-    a.cancel();
+    a.cancel(); // no change
+
     EXPECT_EQ(a.get_Status(), Status::Completed);
 }
 
-TEST(AppointmentTest, CancelTwiceStaysCancelled)
+/* ================= COMPLETE ================= */
+
+TEST(AppointmentTest, CompleteFromScheduled)
 {
     AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.cancel();
-    a.cancel();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
-}
 
-/* ===================== COMPLETE ===================== */
-
-// covers if(status == Scheduled) true branch in complete()
-TEST(AppointmentTest, CompleteScheduledAppointment)
-{
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
     Appointment a(1, 1, 1, info, Status::Scheduled);
     a.complete();
+
     EXPECT_EQ(a.get_Status(), Status::Completed);
 }
 
-// covers false branch of if(status == Scheduled) in complete() — status is Completed
-TEST(AppointmentTest, CompleteWhenAlreadyCompleted)
+TEST(AppointmentTest, CompleteFromCompleted)
 {
     AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.complete();
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Completed);
-}
 
-// covers false branch of if(status == Scheduled) in complete() — status is Cancelled
-TEST(AppointmentTest, CompleteWhenAlreadyCancelled)
-{
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Cancelled);
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
-}
-
-// FIX: directly constructed Completed — complete() false branch without transition
-TEST(AppointmentTest, CompleteDirectlyCompletedStatus)
-{
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
     Appointment a(1, 1, 1, info, Status::Completed);
     a.complete();
+
     EXPECT_EQ(a.get_Status(), Status::Completed);
 }
 
-TEST(AppointmentTest, CompleteTwiceStaysCompleted)
+TEST(AppointmentTest, CompleteFromCancelled)
 {
     AppointmentInfo info{"p", "d", "2026", "10AM"};
+
+    Appointment a(1, 1, 1, info, Status::Cancelled);
+    a.complete();
+
+    EXPECT_EQ(a.get_Status(), Status::Cancelled);
+}
+
+/* ================= MIXED CHAINS (IMPORTANT FOR COVERAGE) ================= */
+
+TEST(AppointmentTest, CancelThenComplete)
+{
+    AppointmentInfo info{"p", "d", "2026", "10AM"};
+
     Appointment a(1, 1, 1, info, Status::Scheduled);
+
+    a.cancel();
+    a.complete(); // should NOT change
+
+    EXPECT_EQ(a.get_Status(), Status::Cancelled);
+}
+
+TEST(AppointmentTest, CompleteThenCancel)
+{
+    AppointmentInfo info{"p", "d", "2026", "10AM"};
+
+    Appointment a(1, 1, 1, info, Status::Scheduled);
+
     a.complete();
-    a.complete();
+    a.cancel(); // should NOT change
+
     EXPECT_EQ(a.get_Status(), Status::Completed);
 }
 
-/* ===================== CANCEL + COMPLETE INTERACTION ===================== */
-
-TEST(AppointmentTest, CancelAndComplete)
+TEST(AppointmentTest, DoubleCancel)
 {
     AppointmentInfo info{"p", "d", "2026", "10AM"};
+
     Appointment a(1, 1, 1, info, Status::Scheduled);
+
     a.cancel();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
-}
-
-TEST(AppointmentTest, CancelPreventsCompletionFully)
-{
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
     a.cancel();
-    a.complete();
-    EXPECT_NE(a.get_Status(), Status::Completed);
+
     EXPECT_EQ(a.get_Status(), Status::Cancelled);
 }
 
-TEST(AppointmentTest, ConstructorWithCancelledState)
+TEST(AppointmentTest, DoubleComplete)
 {
     AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Cancelled);
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
-}
 
-/* ===================== PRINT SAFETY ===================== */
-
-// covers if(status == Scheduled) true branch in print_row()
-TEST(AppointmentTest, PrintRowScheduled)
-{
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
     Appointment a(1, 1, 1, info, Status::Scheduled);
-    EXPECT_NO_THROW(a.print_row());
-}
 
-// covers else if(status == Cancelled) true branch in print_row()
-TEST(AppointmentTest, PrintRowCancelled)
-{
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Cancelled);
-    EXPECT_NO_THROW(a.print_row());
-}
-
-// covers else branch in print_row() — status is Completed
-// also covers false branch of else if(status == Cancelled)
-TEST(AppointmentTest, PrintRowCompleted)
-{
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
     a.complete();
-    EXPECT_NO_THROW(a.print_row());
+    a.complete();
+
+    EXPECT_EQ(a.get_Status(), Status::Completed);
 }
 
-// FIX: directly constructed Completed — ensures else if false branch is hit independently
-TEST(AppointmentTest, PrintRowDirectlyCompleted)
+/* ================= PRINT (ALL BRANCHES) ================= */
+
+TEST(AppointmentTest, PrintAllStates)
 {
     AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Completed);
-    EXPECT_NO_THROW(a.print_row());
+
+    Appointment a1(1, 1, 1, info, Status::Scheduled);
+    Appointment a2(2, 2, 2, info, Status::Cancelled);
+    Appointment a3(3, 3, 3, info, Status::Completed);
+
+    EXPECT_NO_THROW(a1.print_row());
+    EXPECT_NO_THROW(a2.print_row());
+    EXPECT_NO_THROW(a3.print_row());
 }
 
-/* ===================== GETTERS ===================== */
+/* ================= GETTERS FULL COVERAGE ================= */
 
-// FIX: explicitly exercises all getters to ensure condition coverage on return values
-TEST(AppointmentTest, AllGetters)
+TEST(AppointmentTest, GettersCoverage)
 {
     AppointmentInfo info{"Alice", "Bob", "2026-01-01", "9AM"};
+
     Appointment a(10, 20, 30, info, Status::Scheduled);
+
     EXPECT_EQ(a.get_AppointmentId(), 10);
-    EXPECT_EQ(a.get_PatientId(),     20);
-    EXPECT_EQ(a.get_DoctorId(),      30);
-    EXPECT_EQ(a.get_Date(),          "2026-01-01");
-    EXPECT_EQ(a.get_Time(),          "9AM");
-    EXPECT_EQ(a.get_Status(),        Status::Scheduled);
+    EXPECT_EQ(a.get_PatientId(), 20);
+    EXPECT_EQ(a.get_DoctorId(), 30);
+    EXPECT_EQ(a.get_Date(), "2026-01-01");
+    EXPECT_EQ(a.get_Time(), "9AM");
+    EXPECT_EQ(a.get_Status(), Status::Scheduled);
 }
