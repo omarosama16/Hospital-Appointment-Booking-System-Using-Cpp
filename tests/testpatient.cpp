@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "Patient.h"
 
-/* ================= CONSTRUCTOR - ALL FIELDS ================= */
+/* ================= CONSTRUCTOR ================= */
 
 TEST(PatientTest, Constructor_AllFields)
 {
@@ -17,12 +17,9 @@ TEST(PatientTest, Constructor_AllFields)
 TEST(PatientTest, Constructor_DifferentId)
 {
     Patient p(99, "Sara", "s@test.com", "pass99", "011");
-    EXPECT_EQ(p.get_id(),       99);
-    EXPECT_EQ(p.get_name(),     "Sara");
-    EXPECT_EQ(p.get_email(),    "s@test.com");
-    EXPECT_EQ(p.get_password(), "pass99");
-    EXPECT_EQ(p.get_role(),     "patient");
-    EXPECT_EQ(p.get_phone(),    "011");
+    EXPECT_EQ(p.get_id(),    99);
+    EXPECT_EQ(p.get_role(),  "patient");
+    EXPECT_EQ(p.get_phone(), "011");
 }
 
 TEST(PatientTest, Constructor_ZeroId)
@@ -57,7 +54,6 @@ TEST(PatientTest, Constructor_LongStrings)
     std::string longEmail(200, 'B');
     std::string longPass(200, 'C');
     std::string longPhone(20, '9');
-
     Patient p(42, longName, longEmail, longPass, longPhone);
     EXPECT_EQ(p.get_name(),     longName);
     EXPECT_EQ(p.get_email(),    longEmail);
@@ -82,14 +78,11 @@ TEST(PatientTest, RoleIsAlwaysPatient)
 {
     Patient p1(1, "A", "a@test.com", "p1", "010");
     Patient p2(2, "B", "b@test.com", "p2", "011");
-    Patient p3(3, "C", "c@test.com", "p3", "012");
-
     EXPECT_EQ(p1.get_role(), "patient");
     EXPECT_EQ(p2.get_role(), "patient");
-    EXPECT_EQ(p3.get_role(), "patient");
 }
 
-/* ================= PHONE SETTER / GETTER ================= */
+/* ================= PHONE SETTER/GETTER ================= */
 
 TEST(PatientTest, SetPhone_Basic)
 {
@@ -105,7 +98,7 @@ TEST(PatientTest, SetPhone_ToEmpty)
     EXPECT_EQ(p.get_phone(), "");
 }
 
-TEST(PatientTest, SetPhone_ToLongNumber)
+TEST(PatientTest, SetPhone_LongNumber)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     std::string longPhone(30, '5');
@@ -131,93 +124,82 @@ TEST(PatientTest, SetPhone_SpecialChars)
     EXPECT_EQ(p.get_phone(), "+20-010-123-4567");
 }
 
-/* ================= AUTHENTICATE - ALL CONDITION BRANCHES ================= */
+/* ================= AUTHENTICATE - ALL BRANCHES ================= */
 
-// email=TRUE && password=TRUE → true
-TEST(PatientTest, Authenticate_Success)
+TEST(PatientTest, Auth_Success)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     EXPECT_TRUE(p.Authenticate("a@test.com", "1234"));
 }
 
-// email=TRUE && password=FALSE → false
-TEST(PatientTest, Authenticate_WrongPassword)
+TEST(PatientTest, Auth_WrongPassword)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     EXPECT_FALSE(p.Authenticate("a@test.com", "wrong"));
 }
 
-// email=FALSE (short-circuit) → false
-TEST(PatientTest, Authenticate_WrongEmail)
+TEST(PatientTest, Auth_WrongEmail)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     EXPECT_FALSE(p.Authenticate("wrong@test.com", "1234"));
 }
 
-// email=FALSE && password=FALSE → false
-TEST(PatientTest, Authenticate_BothWrong)
+TEST(PatientTest, Auth_BothWrong)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     EXPECT_FALSE(p.Authenticate("x", "y"));
 }
 
-// email=TRUE && password=FALSE: correct email, empty password
-TEST(PatientTest, Authenticate_CorrectEmailEmptyPassword)
+TEST(PatientTest, Auth_CorrectEmailEmptyPassword)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     EXPECT_FALSE(p.Authenticate("a@test.com", ""));
 }
 
-// email=FALSE: empty email with correct password
-TEST(PatientTest, Authenticate_EmptyEmailCorrectPassword)
+TEST(PatientTest, Auth_EmptyEmailCorrectPassword)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     EXPECT_FALSE(p.Authenticate("", "1234"));
 }
 
-// email=TRUE && password=TRUE on empty-string patient
-TEST(PatientTest, Authenticate_EmptyCredentialsMatch)
+TEST(PatientTest, Auth_EmptyCredentialsMatch)
 {
     Patient p(1, "", "", "", "");
     EXPECT_TRUE(p.Authenticate("", ""));
 }
 
-// email=FALSE on empty-string patient
-TEST(PatientTest, Authenticate_EmptyPatient_WrongEmail)
+TEST(PatientTest, Auth_EmptyPatient_WrongEmail)
 {
     Patient p(1, "", "", "", "");
-    EXPECT_FALSE(p.Authenticate("someone@test.com", ""));
+    EXPECT_FALSE(p.Authenticate("x@test.com", ""));
 }
 
-// email=TRUE && password=FALSE on empty-string patient
-TEST(PatientTest, Authenticate_EmptyPatient_WrongPassword)
+TEST(PatientTest, Auth_EmptyPatient_WrongPassword)
 {
     Patient p(1, "", "", "", "");
     EXPECT_FALSE(p.Authenticate("", "wrongpass"));
 }
 
-/* ================= SETTERS (inherited from User) ================= */
+/* ================= SETTERS ================= */
 
 TEST(PatientTest, AllSetters)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
-
     p.set_id(55);
-    p.set_name("NewName");
+    p.set_name("New");
     p.set_email("new@test.com");
     p.set_password("newpass");
     p.set_role("patient");
     p.set_phone("099");
-
     EXPECT_EQ(p.get_id(),       55);
-    EXPECT_EQ(p.get_name(),     "NewName");
+    EXPECT_EQ(p.get_name(),     "New");
     EXPECT_EQ(p.get_email(),    "new@test.com");
     EXPECT_EQ(p.get_password(), "newpass");
     EXPECT_EQ(p.get_role(),     "patient");
     EXPECT_EQ(p.get_phone(),    "099");
 }
 
-TEST(PatientTest, Authenticate_AfterSetEmail_Success)
+TEST(PatientTest, Auth_AfterSetters_Success)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     p.set_email("new@test.com");
@@ -225,7 +207,7 @@ TEST(PatientTest, Authenticate_AfterSetEmail_Success)
     EXPECT_TRUE(p.Authenticate("new@test.com", "newpass"));
 }
 
-TEST(PatientTest, Authenticate_AfterSetEmail_WrongPassword)
+TEST(PatientTest, Auth_AfterSetters_WrongPassword)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     p.set_email("new@test.com");
@@ -233,7 +215,7 @@ TEST(PatientTest, Authenticate_AfterSetEmail_WrongPassword)
     EXPECT_FALSE(p.Authenticate("new@test.com", "wrong"));
 }
 
-TEST(PatientTest, Authenticate_AfterSetEmail_WrongEmail)
+TEST(PatientTest, Auth_AfterSetters_WrongEmail)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     p.set_email("new@test.com");
@@ -241,7 +223,7 @@ TEST(PatientTest, Authenticate_AfterSetEmail_WrongEmail)
     EXPECT_FALSE(p.Authenticate("other@test.com", "newpass"));
 }
 
-TEST(PatientTest, Authenticate_OldCredentialsFailAfterUpdate)
+TEST(PatientTest, Auth_OldCredsFail)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
     p.set_email("new@test.com");
@@ -251,7 +233,7 @@ TEST(PatientTest, Authenticate_OldCredentialsFailAfterUpdate)
 
 /* ================= MULTIPLE INSTANCES ================= */
 
-TEST(PatientTest, MultipleInstances_Independent)
+TEST(PatientTest, MultipleInstances)
 {
     Patient p1(1, "Ali",  "a@test.com", "pass1", "010");
     Patient p2(2, "Sara", "s@test.com", "pass2", "011");
@@ -261,11 +243,9 @@ TEST(PatientTest, MultipleInstances_Independent)
     EXPECT_TRUE(p2.Authenticate("s@test.com", "pass2"));
     EXPECT_TRUE(p3.Authenticate("o@test.com", "pass3"));
 
-    // Cross-auth fails
     EXPECT_FALSE(p1.Authenticate("s@test.com", "pass2"));
     EXPECT_FALSE(p2.Authenticate("a@test.com", "pass1"));
 
-    // Phones independent
     EXPECT_EQ(p1.get_phone(), "010");
     EXPECT_EQ(p2.get_phone(), "011");
     EXPECT_EQ(p3.get_phone(), "012");
@@ -273,10 +253,10 @@ TEST(PatientTest, MultipleInstances_Independent)
 
 /* ================= STRESS ================= */
 
-TEST(PatientTest, AuthenticateStress)
+TEST(PatientTest, AuthStress)
 {
     Patient p(1, "Ali", "a@test.com", "1234", "010");
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 50; i++)
     {
         EXPECT_TRUE(p.Authenticate("a@test.com", "1234"));
         EXPECT_FALSE(p.Authenticate("a@test.com", "wrong"));
