@@ -10,7 +10,9 @@ HospitalSystem::HospitalSystem()
     nextApptId = 1;
     currentUser = nullptr;
 
-    const int adminId = nextUserId++;
+    // FIX Line 13: extracted assignment from expression
+    const int adminId = nextUserId;
+    nextUserId++;
     allUsers.push_back(std::make_unique<Admin>(adminId, "admin", "admin@mail.com", "admin123"));
 }
 
@@ -51,7 +53,9 @@ void HospitalSystem::registerNewPatient(std::string_view n,
                                         std::string_view p,
                                         std::string_view phone)
 {
-    const int patientId = nextUserId++;
+    // FIX: extracted assignment from expression
+    const int patientId = nextUserId;
+    nextUserId++;
     allUsers.push_back(std::make_unique<Patient>(patientId, n, e, p, phone));
 }
 
@@ -60,7 +64,9 @@ void HospitalSystem::registerNewDoctor(std::string_view n,
                                        std::string_view p,
                                        std::string_view s)
 {
-    const int doctorId = nextUserId++;
+    // FIX: extracted assignment from expression
+    const int doctorId = nextUserId;
+    nextUserId++;
     auto d = std::make_unique<Doctor>(doctorId, n, e, p, s);
     d->addAvailability("10AM");
     d->addAvailability("11AM");
@@ -80,7 +86,9 @@ bool HospitalSystem::bookAppointment(int docId,
     if (!d)
         return false;
 
-    const int apptId = nextApptId++;
+    // FIX: extracted assignment from expression
+    const int apptId = nextApptId;
+    nextApptId++;
     AppointmentInfo info{currentUser->get_name(), d->get_name(),
                          std::string(date), std::string(time)};
 
@@ -139,7 +147,6 @@ std::vector<Appointment> HospitalSystem::viewDoctorSchedule() const
     return res;
 }
 
-// FIX: Line 142 — corrupted function signature restored
 bool HospitalSystem::completeAppointmentDoctor(int id)
 {
     if (!currentUser || currentUser->get_role() != "doctor")
