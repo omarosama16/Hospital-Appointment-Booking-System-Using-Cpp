@@ -22,15 +22,16 @@ User *HospitalSystem::getCurrentUser() const
 
 Doctor *HospitalSystem::findDoctorById(int id)
 {
-    for (auto &u : allUsers)
+    // Fix: const auto & — loop only reads each unique_ptr, never modifies it
+    for (const auto &u : allUsers)
     {
         if (u->get_role() == "doctor")
         {
-            // Fix: pointer-to-const — findDoctorById does not modify the Doctor
+            // Fix: pointer-to-const — only reading the Doctor to check its id
             const Doctor *d = dynamic_cast<const Doctor *>(u.get());
 
             if (d && d->get_id() == id)
-                return const_cast<Doctor *>(d); // cast back for callers that need non-const
+                return const_cast<Doctor *>(d);
         }
     }
 
@@ -39,7 +40,8 @@ Doctor *HospitalSystem::findDoctorById(int id)
 
 bool HospitalSystem::login(std::string e, std::string p)
 {
-    for (auto &u : allUsers)
+    // Fix: const auto & — loop only reads each unique_ptr to authenticate
+    for (const auto &u : allUsers)
     {
         if (u->Authenticate(e, p))
         {
@@ -82,7 +84,8 @@ bool HospitalSystem::bookAppointment(int docId,
     if (currentUser->get_role() != "patient")
         return false;
 
-    Doctor *d = findDoctorById(docId);
+    // Fix: pointer-to-const — d is only read to get the doctor's name
+    const Doctor *d = findDoctorById(docId);
 
     if (!d)
         return false;
@@ -113,7 +116,7 @@ bool HospitalSystem::cancelAppointmentPatient(int id)
             if (a.get_Status() != Status::Scheduled)
                 return false;
 
-            a.cancel();
+            a.cancel();   // mutates — auto & is correct here
             return true;
         }
     }
@@ -128,7 +131,6 @@ std::vector<Appointment> HospitalSystem::viewMyAppointments()
     if (!currentUser)
         return res;
 
-    // Fix: reference-to-const — loop does not modify appointments
     for (const auto &a : masterSchedule)
     {
         if (a.get_PatientId() == currentUser->get_id())
@@ -145,7 +147,6 @@ std::vector<Appointment> HospitalSystem::viewDoctorSchedule()
     if (!currentUser)
         return res;
 
-    // Fix: reference-to-const — loop does not modify appointments
     for (const auto &a : masterSchedule)
     {
         if (a.get_DoctorId() == currentUser->get_id())
@@ -168,7 +169,7 @@ bool HospitalSystem::completeAppointmentDoctor(int id)
             if (a.get_Status() != Status::Scheduled)
                 return false;
 
-            a.complete();
+            a.complete();  // mutates — auto & is correct here
             return true;
         }
     }
@@ -186,7 +187,8 @@ std::vector<User *> HospitalSystem::adminViewAllUsers()
     std::vector<User *> raw;
     raw.reserve(allUsers.size());
 
-    for (auto &u : allUsers)
+    // Fix: const auto & — loop only reads each unique_ptr to extract raw pointer
+    for (const auto &u : allUsers)
         raw.push_back(u.get());
 
     return raw;
