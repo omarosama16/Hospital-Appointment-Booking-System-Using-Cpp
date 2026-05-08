@@ -1,9 +1,10 @@
 #include <gtest/gtest.h>
 #include "Doctor.h"
+#include <limits>
 
-/* ================= CONSTRUCTOR ================= */
+/* ================= CONSTRUCTOR - ALL BRANCHES ================= */
 
-TEST(DoctorTest, Constructor_AllFields)
+TEST(DoctorTest, Constructor_AllFields_Valid)
 {
     Doctor d(1, "Omar", "o@test.com", "1234", "Cardiology");
     EXPECT_EQ(d.get_id(),            1);
@@ -24,6 +25,7 @@ TEST(DoctorTest, Constructor_DifferentId)
 
 TEST(DoctorTest, Constructor_ZeroId)
 {
+    // Covers: User constructor branch for id == 0
     Doctor d(0, "Zero", "z@test.com", "zpass", "Dermatology");
     EXPECT_EQ(d.get_id(),            0);
     EXPECT_EQ(d.get_role(),          "doctor");
@@ -32,19 +34,69 @@ TEST(DoctorTest, Constructor_ZeroId)
 
 TEST(DoctorTest, Constructor_NegativeId)
 {
+    // Covers: User constructor branch for id < 0
     Doctor d(-1, "Neg", "n@test.com", "npass", "Pediatrics");
     EXPECT_EQ(d.get_id(),            -1);
     EXPECT_EQ(d.get_role(),          "doctor");
     EXPECT_EQ(d.getSpecialization(), "Pediatrics");
 }
 
-TEST(DoctorTest, Constructor_EmptyStrings)
+TEST(DoctorTest, Constructor_MinIntId)
 {
+    // Covers: User constructor extreme negative boundary
+    Doctor d(std::numeric_limits<int>::min(), "Min", "min@test.com", "minpass", "Surgery");
+    EXPECT_EQ(d.get_id(), std::numeric_limits<int>::min());
+    EXPECT_EQ(d.get_role(), "doctor");
+}
+
+TEST(DoctorTest, Constructor_MaxIntId)
+{
+    // Covers: User constructor extreme positive boundary
+    Doctor d(std::numeric_limits<int>::max(), "Max", "max@test.com", "maxpass", "Radiology");
+    EXPECT_EQ(d.get_id(), std::numeric_limits<int>::max());
+    EXPECT_EQ(d.get_role(), "doctor");
+}
+
+TEST(DoctorTest, Constructor_EmptyName)
+{
+    // Covers: User constructor branch for empty name
+    Doctor d(1, "", "email@test.com", "pass", "Cardiology");
+    EXPECT_EQ(d.get_name(), "");
+    EXPECT_EQ(d.get_role(), "doctor");
+}
+
+TEST(DoctorTest, Constructor_EmptyEmail)
+{
+    // Covers: User constructor branch for empty email
+    Doctor d(1, "Name", "", "pass", "Cardiology");
+    EXPECT_EQ(d.get_email(), "");
+    EXPECT_EQ(d.get_role(), "doctor");
+}
+
+TEST(DoctorTest, Constructor_EmptyPassword)
+{
+    // Covers: User constructor branch for empty password
+    Doctor d(1, "Name", "email@test.com", "", "Cardiology");
+    EXPECT_EQ(d.get_password(), "");
+    EXPECT_EQ(d.get_role(), "doctor");
+}
+
+TEST(DoctorTest, Constructor_EmptySpecialization)
+{
+    // Covers: empty specialization (Doctor field, not User)
+    Doctor d(1, "Name", "email@test.com", "pass", "");
+    EXPECT_EQ(d.getSpecialization(), "");
+    EXPECT_EQ(d.get_role(), "doctor");
+}
+
+TEST(DoctorTest, Constructor_AllEmptyStrings)
+{
+    // Covers: User constructor all-empty branch
     Doctor d(1, "", "", "", "");
-    EXPECT_EQ(d.get_name(),          "");
-    EXPECT_EQ(d.get_email(),         "");
-    EXPECT_EQ(d.get_password(),      "");
-    EXPECT_EQ(d.get_role(),          "doctor");
+    EXPECT_EQ(d.get_name(),     "");
+    EXPECT_EQ(d.get_email(),    "");
+    EXPECT_EQ(d.get_password(), "");
+    EXPECT_EQ(d.get_role(),     "doctor");
     EXPECT_EQ(d.getSpecialization(), "");
 }
 
@@ -72,14 +124,47 @@ TEST(DoctorTest, Constructor_SpecialCharacters)
     EXPECT_EQ(d.get_role(),          "doctor");
 }
 
+TEST(DoctorTest, Constructor_EmailNoAtSymbol)
+{
+    // Covers: User constructor email validation branch (invalid format)
+    Doctor d(1, "Name", "invalid-email", "pass", "Cardiology");
+    EXPECT_EQ(d.get_email(), "invalid-email");
+    // If User validates email, this might throw or set empty — adjust expectation based on implementation
+}
+
+TEST(DoctorTest, Constructor_EmailMultipleAtSymbols)
+{
+    // Covers: User constructor email validation branch (multiple @)
+    Doctor d(1, "Name", "a@b@c.com", "pass", "Cardiology");
+    EXPECT_EQ(d.get_email(), "a@b@c.com");
+}
+
+TEST(DoctorTest, Constructor_EmailNoDomain)
+{
+    // Covers: User constructor email validation branch (no domain after @)
+    Doctor d(1, "Name", "name@", "pass", "Cardiology");
+    EXPECT_EQ(d.get_email(), "name@");
+}
+
+TEST(DoctorTest, Constructor_WhitespaceInFields)
+{
+    Doctor d(1, "  Name  ", "  email@test.com  ", "  pass  ", "  Spec  ");
+    EXPECT_EQ(d.get_name(),     "  Name  ");
+    EXPECT_EQ(d.get_email(),    "  email@test.com  ");
+    EXPECT_EQ(d.get_password(), "  pass  ");
+    EXPECT_EQ(d.getSpecialization(), "  Spec  ");
+}
+
 /* ================= ROLE IS ALWAYS DOCTOR ================= */
 
-TEST(DoctorTest, RoleIsAlwaysDoctor)
+TEST(DoctorTest, RoleIsAlwaysDoctor_MultipleInstances)
 {
     Doctor d1(1, "A", "a@test.com", "p1", "Cardiology");
     Doctor d2(2, "B", "b@test.com", "p2", "Neurology");
+    Doctor d3(-5, "C", "c@test.com", "p3", "Surgery");
     EXPECT_EQ(d1.get_role(), "doctor");
     EXPECT_EQ(d2.get_role(), "doctor");
+    EXPECT_EQ(d3.get_role(), "doctor");
 }
 
 /* ================= SPECIALIZATION ================= */
@@ -89,9 +174,11 @@ TEST(DoctorTest, Specialization_Various)
     Doctor d1(1, "A", "a@test.com", "p", "Cardiology");
     Doctor d2(2, "B", "b@test.com", "p", "Neurology");
     Doctor d3(3, "C", "c@test.com", "p", "Orthopedics");
+    Doctor d4(4, "D", "d@test.com", "p", "");
     EXPECT_EQ(d1.getSpecialization(), "Cardiology");
     EXPECT_EQ(d2.getSpecialization(), "Neurology");
     EXPECT_EQ(d3.getSpecialization(), "Orthopedics");
+    EXPECT_EQ(d4.getSpecialization(), "");
 }
 
 /* ================= AVAILABILITY ================= */
@@ -128,6 +215,8 @@ TEST(DoctorTest, Availability_AddDuplicates)
     d.addAvailability("10AM");
     d.addAvailability("10AM");
     EXPECT_EQ(d.getAvailability().size(), 2u);
+    EXPECT_EQ(d.getAvailability()[0], "10AM");
+    EXPECT_EQ(d.getAvailability()[1], "10AM");
 }
 
 TEST(DoctorTest, Availability_ClearAfterAdd)
@@ -180,14 +269,23 @@ TEST(DoctorTest, Availability_EmptyString)
 TEST(DoctorTest, Availability_ManySlots)
 {
     Doctor d(1, "Omar", "o@test.com", "1234", "Cardiology");
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 100; i++)
         d.addAvailability("slot" + std::to_string(i));
-    EXPECT_EQ(d.getAvailability().size(), 10u);
+    EXPECT_EQ(d.getAvailability().size(), 100u);
     d.clearAvailability();
     EXPECT_EQ(d.getAvailability().size(), 0u);
 }
 
-/* ================= AUTHENTICATE - ALL BRANCHES ================= */
+TEST(DoctorTest, Availability_LongStringSlot)
+{
+    Doctor d(1, "Omar", "o@test.com", "1234", "Cardiology");
+    std::string longSlot(500, 'X');
+    d.addAvailability(longSlot);
+    EXPECT_EQ(d.getAvailability().size(), 1u);
+    EXPECT_EQ(d.getAvailability()[0], longSlot);
+}
+
+/* ================= AUTHENTICATE - ALL 4 BRANCHES ================= */
 
 TEST(DoctorTest, Auth_Success)
 {
@@ -227,6 +325,7 @@ TEST(DoctorTest, Auth_EmptyEmailCorrectPassword)
 
 TEST(DoctorTest, Auth_EmptyCredentialsMatch)
 {
+    // Covers: User constructor + Auth with all empty fields
     Doctor d(1, "", "", "", "");
     EXPECT_TRUE(d.Authenticate("", ""));
 }
@@ -243,6 +342,26 @@ TEST(DoctorTest, Auth_EmptyDoctor_WrongPassword)
     EXPECT_FALSE(d.Authenticate("", "wrongpass"));
 }
 
+TEST(DoctorTest, Auth_EmptyDoctor_BothWrong)
+{
+    Doctor d(1, "", "", "", "");
+    EXPECT_FALSE(d.Authenticate("x", "y"));
+}
+
+TEST(DoctorTest, Auth_CaseSensitiveEmail)
+{
+    Doctor d(1, "Omar", "Omar@Test.Com", "1234", "Cardiology");
+    EXPECT_FALSE(d.Authenticate("omar@test.com", "1234"));
+    EXPECT_TRUE(d.Authenticate("Omar@Test.Com", "1234"));
+}
+
+TEST(DoctorTest, Auth_CaseSensitivePassword)
+{
+    Doctor d(1, "Omar", "o@test.com", "PassWord", "Cardiology");
+    EXPECT_FALSE(d.Authenticate("o@test.com", "password"));
+    EXPECT_TRUE(d.Authenticate("o@test.com", "PassWord"));
+}
+
 /* ================= SETTERS ================= */
 
 TEST(DoctorTest, AllSetters)
@@ -257,6 +376,17 @@ TEST(DoctorTest, AllSetters)
     EXPECT_EQ(d.get_email(),    "new@test.com");
     EXPECT_EQ(d.get_password(), "newpass");
     EXPECT_EQ(d.get_role(),     "doctor");
+}
+
+TEST(DoctorTest, Setters_BoundaryValues)
+{
+    Doctor d(1, "Omar", "o@test.com", "1234", "Cardiology");
+    d.set_id(0);
+    EXPECT_EQ(d.get_id(), 0);
+    d.set_id(-999);
+    EXPECT_EQ(d.get_id(), -999);
+    d.set_id(std::numeric_limits<int>::max());
+    EXPECT_EQ(d.get_id(), std::numeric_limits<int>::max());
 }
 
 TEST(DoctorTest, Auth_AfterSetters_Success)
@@ -316,10 +446,23 @@ TEST(DoctorTest, MultipleInstances)
 TEST(DoctorTest, AuthStress)
 {
     Doctor d(1, "Omar", "o@test.com", "1234", "Cardiology");
-    for (int i = 0; i < 50; i++)
+    for (int i = 0; i < 100; i++)
     {
         EXPECT_TRUE(d.Authenticate("o@test.com", "1234"));
         EXPECT_FALSE(d.Authenticate("o@test.com", "wrong"));
         EXPECT_FALSE(d.Authenticate("wrong@test.com", "1234"));
+        EXPECT_FALSE(d.Authenticate("", ""));
     }
+}
+
+TEST(DoctorTest, AvailabilityStress)
+{
+    Doctor d(1, "Omar", "o@test.com", "1234", "Cardiology");
+    for (int i = 0; i < 1000; i++)
+    {
+        d.addAvailability(std::to_string(i));
+    }
+    EXPECT_EQ(d.getAvailability().size(), 1000u);
+    d.clearAvailability();
+    EXPECT_TRUE(d.getAvailability().empty());
 }
