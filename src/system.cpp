@@ -2,6 +2,7 @@
 #include "Doctor.h"
 #include "Patient.h"
 #include "admin.h"
+#include <memory>
 
 HospitalSystem::HospitalSystem()
 {
