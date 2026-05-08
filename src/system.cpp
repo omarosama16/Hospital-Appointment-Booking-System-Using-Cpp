@@ -9,14 +9,10 @@ HospitalSystem::HospitalSystem()
     nextApptId = 1;
     currentUser = nullptr;
 
-    allUsers.push_back(new Admin(nextUserId++, "admin", "admin@mail.com", "admin123"));
+    allUsers.push_back(std::make_unique<Admin>(nextUserId++, "admin", "admin@mail.com", "admin123"));
 }
 
-HospitalSystem::~HospitalSystem()
-{
-    for (auto u : allUsers)
-        delete u;
-}
+// No destructor needed — unique_ptr cleans up automatically.
 
 User *HospitalSystem::getCurrentUser() const
 {
@@ -25,11 +21,11 @@ User *HospitalSystem::getCurrentUser() const
 
 Doctor *HospitalSystem::findDoctorById(int id)
 {
-    for (auto u : allUsers)
+    for (auto &u : allUsers)
     {
         if (u->get_role() == "doctor")
         {
-            Doctor *d = dynamic_cast<Doctor *>(u);
+            Doctor *d = dynamic_cast<Doctor *>(u.get());
 
             if (d && d->get_id() == id)
                 return d;
@@ -41,11 +37,11 @@ Doctor *HospitalSystem::findDoctorById(int id)
 
 bool HospitalSystem::login(std::string e, std::string p)
 {
-    for (auto u : allUsers)
+    for (auto &u : allUsers)
     {
         if (u->Authenticate(e, p))
         {
-            currentUser = u;
+            currentUser = u.get();
             return true;
         }
     }
@@ -58,7 +54,7 @@ void HospitalSystem::registerNewPatient(std::string n,
                                         std::string p,
                                         std::string phone)
 {
-    allUsers.push_back(new Patient(nextUserId++, n, e, p, phone));
+    allUsers.push_back(std::make_unique<Patient>(nextUserId++, n, e, p, phone));
 }
 
 void HospitalSystem::registerNewDoctor(std::string n,
@@ -66,19 +62,18 @@ void HospitalSystem::registerNewDoctor(std::string n,
                                        std::string p,
                                        std::string s)
 {
-    Doctor *d = new Doctor(nextUserId++, n, e, p, s);
+    auto d = std::make_unique<Doctor>(nextUserId++, n, e, p, s);
 
     d->addAvailability("10AM");
     d->addAvailability("11AM");
 
-    allUsers.push_back(d);
+    allUsers.push_back(std::move(d));
 }
 
 bool HospitalSystem::bookAppointment(int docId,
                                      std::string date,
                                      std::string time)
 {
-
     if (!currentUser)
         return false;
 
@@ -184,5 +179,11 @@ std::vector<Appointment> HospitalSystem::adminViewAllAppointments()
 
 std::vector<User *> HospitalSystem::adminViewAllUsers()
 {
-    return allUsers;
+    std::vector<User *> raw;
+    raw.reserve(allUsers.size());
+
+    for (auto &u : allUsers)
+        raw.push_back(u.get());
+
+    return raw;
 }
