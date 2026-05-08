@@ -1,36 +1,27 @@
-#pragma once
+#include "user.h"
 
-#include <string>
-#include <string_view>
+// Fix: use member initializer list instead of assignment in body
+User::User()
+    : id(0), name(""), email(""), password(""), role("") {}
 
-class User
+User::User(int i, std::string_view n, std::string_view e,
+           std::string_view p, std::string_view r)
+    : id(i), name(n), email(e), password(p), role(r) {}
+
+void User::set_id(int i)                { id = i; }
+void User::set_name(std::string_view n)     { name = n; }
+void User::set_password(std::string_view p) { password = p; }
+void User::set_role(std::string_view r)     { role = r; }
+void User::set_email(std::string_view e)    { email = e; }
+
+int         User::get_id()       const { return id; }
+std::string User::get_name()     const { return name; }
+std::string User::get_email()    const { return email; }
+std::string User::get_password() const { return password; }
+std::string User::get_role()     const { return role; }
+
+// Fix: declared const — only reads email and password, never modifies them
+bool User::Authenticate(std::string_view e, std::string_view p) const
 {
-public:
-    User();
-    User(int i, std::string_view n, std::string_view e,
-         std::string_view p, std::string_view r);
-
-    virtual ~User() = default;
-
-    void set_id(int i);
-    void set_name(std::string_view n);
-    void set_email(std::string_view e);
-    void set_password(std::string_view p);
-    void set_role(std::string_view r);
-
-    int         get_id()       const;
-    std::string get_name()     const;
-    std::string get_email()    const;
-    std::string get_password() const;
-    std::string get_role()     const;
-
-    // Fix: declared const — only reads email and password, never modifies them
-    bool Authenticate(std::string_view e, std::string_view p) const;
-
-protected:
-    int         id;
-    std::string name;
-    std::string email;
-    std::string password;
-    std::string role;
-};
+    return email == e && password == p;
+}
