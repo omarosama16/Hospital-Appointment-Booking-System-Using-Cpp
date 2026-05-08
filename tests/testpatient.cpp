@@ -72,6 +72,67 @@ TEST(PatientTest, Constructor_SpecialCharacters)
     EXPECT_EQ(p.get_role(),     "patient");
 }
 
+/* ================= COPY / MOVE OPERATIONS - FIX FOR 2 UNCOVERED CONDITIONS ================= */
+
+// Copy constructor - covers compiler-generated copy conditions
+TEST(PatientTest, CopyConstructor)
+{
+    Patient p1(1, "Ali", "a@test.com", "1234", "010");
+    Patient p2(p1);  // copy constructor
+    EXPECT_EQ(p2.get_id(),        1);
+    EXPECT_EQ(p2.get_name(),      "Ali");
+    EXPECT_EQ(p2.get_email(),     "a@test.com");
+    EXPECT_EQ(p2.get_password(),  "1234");
+    EXPECT_EQ(p2.get_phone(),     "010");
+    EXPECT_EQ(p2.get_role(),      "patient");
+
+    // Verify independent copies
+    p2.set_phone("999");
+    EXPECT_EQ(p1.get_phone(), "010");
+    EXPECT_EQ(p2.get_phone(), "999");
+}
+
+// Copy assignment - covers compiler-generated copy assignment conditions
+TEST(PatientTest, CopyAssignment)
+{
+    Patient p1(1, "Ali", "a@test.com", "1234", "010");
+    Patient p2(2, "Sara", "s@test.com", "5678", "011");
+    p2 = p1;  // copy assignment
+    EXPECT_EQ(p2.get_id(),        1);
+    EXPECT_EQ(p2.get_name(),      "Ali");
+    EXPECT_EQ(p2.get_email(),     "a@test.com");
+    EXPECT_EQ(p2.get_password(),  "1234");
+    EXPECT_EQ(p2.get_phone(),     "010");
+    EXPECT_EQ(p2.get_role(),      "patient");
+}
+
+// Move constructor - covers compiler-generated move conditions
+TEST(PatientTest, MoveConstructor)
+{
+    Patient p1(1, "Ali", "a@test.com", "1234", "010");
+    Patient p2(std::move(p1));  // move constructor
+    EXPECT_EQ(p2.get_id(),       1);
+    EXPECT_EQ(p2.get_name(),     "Ali");
+    EXPECT_EQ(p2.get_email(),    "a@test.com");
+    EXPECT_EQ(p2.get_password(), "1234");
+    EXPECT_EQ(p2.get_phone(),    "010");
+    EXPECT_EQ(p2.get_role(),     "patient");
+}
+
+// Move assignment - covers compiler-generated move assignment conditions
+TEST(PatientTest, MoveAssignment)
+{
+    Patient p1(1, "Ali", "a@test.com", "1234", "010");
+    Patient p2(2, "Sara", "s@test.com", "5678", "011");
+    p2 = std::move(p1);  // move assignment
+    EXPECT_EQ(p2.get_id(),       1);
+    EXPECT_EQ(p2.get_name(),     "Ali");
+    EXPECT_EQ(p2.get_email(),    "a@test.com");
+    EXPECT_EQ(p2.get_password(), "1234");
+    EXPECT_EQ(p2.get_phone(),    "010");
+    EXPECT_EQ(p2.get_role(),     "patient");
+}
+
 /* ================= ROLE IS ALWAYS PATIENT ================= */
 
 TEST(PatientTest, RoleIsAlwaysPatient)
