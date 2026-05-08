@@ -1,223 +1,364 @@
 #include <gtest/gtest.h>
-#include "Appointment.h"
+#include "system.h"
 
-/* ===================== DEFAULT ===================== */
+/* ================= TEST ACCESS ================= */
 
-TEST(AppointmentTest, DefaultConstructorFullState)
+class SysTest : public HospitalSystem
 {
-    Appointment a;
-    EXPECT_EQ(a.get_AppointmentId(), 0);
-    EXPECT_EQ(a.get_PatientId(), 0);
-    EXPECT_EQ(a.get_DoctorId(), 0);
-    EXPECT_EQ(a.get_Date(), "");
-    EXPECT_EQ(a.get_Time(), "");
-    EXPECT_EQ(a.get_Status(), Status::Scheduled);
+public:
+    using HospitalSystem::adminViewAllAppointments;
+    using HospitalSystem::adminViewAllUsers;
+};
+
+/* ================= HELPERS ================= */
+
+static int getDoctorId(HospitalSystem &sys)
+{
+    for (auto u : sys.adminViewAllUsers())
+        if (u && u->get_role() == "doctor")
+            return u->get_id();
+    return -1;
 }
 
-/* ===================== PARAMETERIZED ===================== */
-
-TEST(AppointmentTest, ParameterizedConstructor)
+static void setupDoctor(HospitalSystem &sys)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 2, 3, info, Status::Scheduled);
-    EXPECT_EQ(a.get_AppointmentId(), 1);
-    EXPECT_EQ(a.get_PatientId(), 2);
-    EXPECT_EQ(a.get_DoctorId(), 3);
-    EXPECT_EQ(a.get_Date(), "2026");
-    EXPECT_EQ(a.get_Time(), "10AM");
-    EXPECT_EQ(a.get_Status(), Status::Scheduled);
+    sys.registerNewDoctor("d", "d@mail.com", "123", "cardio");
 }
 
-// FIX: covers parameterized constructor with Cancelled status directly
-TEST(AppointmentTest, ParameterizedConstructorCancelled)
+static void setupPatient(HospitalSystem &sys)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 2, 3, info, Status::Cancelled);
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
+    sys.registerNewPatient("p", "p@mail.com", "123", "010");
 }
 
-// FIX: covers parameterized constructor with Completed status directly
-TEST(AppointmentTest, ParameterizedConstructorCompleted)
+/* ================= LOGIN EDGE ================= */
+
+TEST(SysFull, LoginStress)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 2, 3, info, Status::Completed);
-    EXPECT_EQ(a.get_Status(), Status::Completed);
+    HospitalSystem sys;
+    setupPatient(sys);
+    EXPECT_FALSE(sys.login("wrong", "wrong"));
+    EXPECT_FALSE(sys.login("", ""));
+    EXPECT_TRUE(sys.login("p@mail.com", "123"));
 }
 
-/* ===================== CANCEL ===================== */
+/* ================= ROLE SWITCHING ================= */
 
-// covers if(status == Scheduled) true branch in cancel()
-TEST(AppointmentTest, CancelScheduled)
+TEST(SysFull, RoleSwitching)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.cancel();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+    EXPECT_EQ(sys.getCurrentUser()->get_role(), "patient");
+
+    sys.login("d@mail.com", "123");
+    EXPECT_EQ(sys.getCurrentUser()->get_role(), "doctor");
 }
 
-// covers false branch of if(status == Scheduled) in cancel() — status is Cancelled
-TEST(AppointmentTest, CancelWhenAlreadyCancelled)
+/* ================= BOOKING STRESS ================= */
+
+TEST(SysFull, BookingStress)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Cancelled);
-    a.cancel();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    for (int i = 0; i < 5; i++)
+        EXPECT_TRUE(sys.bookAppointment(docId, "2026", "10AM"));
+
+    EXPECT_FALSE(sys.bookAppointment(-1, "2026", "10AM"));
+    EXPECT_FALSE(sys.bookAppointment(9999, "2026", "10AM"));
 }
 
-// covers false branch of if(status == Scheduled) in cancel() — status is Completed
-TEST(AppointmentTest, CancelWhenAlreadyCompleted)
+TEST(SysFull, BookAppointmentNoUser)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.complete();
-    a.cancel();
-    EXPECT_EQ(a.get_Status(), Status::Completed);
+    HospitalSystem sys;
+    setupDoctor(sys);
+    EXPECT_FALSE(sys.bookAppointment(2, "2026", "10AM"));
 }
 
-// FIX: directly constructed Completed — cancel() false branch without going through complete()
-TEST(AppointmentTest, CancelDirectlyCompletedStatus)
+TEST(SysFull, BookAppointmentAsDoctor)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Completed);
-    a.cancel();
-    EXPECT_EQ(a.get_Status(), Status::Completed);
+    HospitalSystem sys;
+    setupDoctor(sys);
+    sys.login("d@mail.com", "123");
+    EXPECT_FALSE(sys.bookAppointment(2, "2026", "10AM"));
 }
 
-TEST(AppointmentTest, CancelTwiceStaysCancelled)
+/* ================= CANCEL EDGE ================= */
+
+TEST(SysFull, CancelStress)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.cancel();
-    a.cancel();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    auto appts = sys.viewMyAppointments();
+    int id = appts[0].get_AppointmentId();
+
+    EXPECT_TRUE(sys.cancelAppointmentPatient(id));
+    EXPECT_FALSE(sys.cancelAppointmentPatient(id));
+    EXPECT_FALSE(sys.cancelAppointmentPatient(-1));
 }
 
-/* ===================== COMPLETE ===================== */
-
-// covers if(status == Scheduled) true branch in complete()
-TEST(AppointmentTest, CompleteScheduledAppointment)
+TEST(SysFull, CancelNoUser)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Completed);
+    HospitalSystem sys;
+    EXPECT_FALSE(sys.cancelAppointmentPatient(1));
 }
 
-// covers false branch of if(status == Scheduled) in complete() — status is Completed
-TEST(AppointmentTest, CompleteWhenAlreadyCompleted)
+TEST(SysFull, CancelWrongPatient)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.complete();
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Completed);
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+    sys.registerNewPatient("p2", "p2@mail.com", "456", "011");
+
+    sys.login("p@mail.com", "123");
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+    sys.bookAppointment(docId, "2026", "10AM");
+    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    sys.login("p2@mail.com", "456");
+    EXPECT_FALSE(sys.cancelAppointmentPatient(id));
 }
 
-// covers false branch of if(status == Scheduled) in complete() — status is Cancelled
-TEST(AppointmentTest, CompleteWhenAlreadyCancelled)
+/* ================= COMPLETE EDGE ================= */
+
+TEST(SysFull, CompleteStress)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Cancelled);
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
+
+    sys.login("d@mail.com", "123");
+
+    EXPECT_TRUE(sys.completeAppointmentDoctor(id));
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
+    EXPECT_FALSE(sys.completeAppointmentDoctor(-1));
 }
 
-// FIX: directly constructed Completed — complete() false branch without transition
-TEST(AppointmentTest, CompleteDirectlyCompletedStatus)
+TEST(SysFull, CompleteNoUser)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Completed);
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Completed);
+    HospitalSystem sys;
+    EXPECT_FALSE(sys.completeAppointmentDoctor(1));
 }
 
-TEST(AppointmentTest, CompleteTwiceStaysCompleted)
+TEST(SysFull, CompleteAsPatient)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.complete();
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Completed);
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+    EXPECT_FALSE(sys.completeAppointmentDoctor(1));
 }
 
-/* ===================== CANCEL + COMPLETE INTERACTION ===================== */
-
-TEST(AppointmentTest, CancelAndComplete)
+TEST(SysFull, CompleteWrongDoctor)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.cancel();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
+    HospitalSystem sys;
+    setupDoctor(sys);
+    sys.registerNewDoctor("d2", "d2@mail.com", "456", "neuro");
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+    sys.bookAppointment(docId, "2026", "10AM");
+    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    sys.login("d2@mail.com", "456");
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
 }
 
-TEST(AppointmentTest, CancelPreventsCompletionFully)
+/* ================= VIEW EDGE ================= */
+
+TEST(SysFull, ViewStress)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.cancel();
-    a.complete();
-    EXPECT_NE(a.get_Status(), Status::Completed);
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
+    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+    EXPECT_FALSE(sys.viewMyAppointments().empty());
+
+    sys.login("d@mail.com", "123");
+    EXPECT_FALSE(sys.viewDoctorSchedule().empty());
 }
 
-TEST(AppointmentTest, ConstructorWithCancelledState)
+TEST(SysFull, ViewMyAppointmentsNoUser)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Cancelled);
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
-    a.complete();
-    EXPECT_EQ(a.get_Status(), Status::Cancelled);
+    HospitalSystem sys;
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
 }
 
-/* ===================== PRINT SAFETY ===================== */
-
-// covers if(status == Scheduled) true branch in print_row()
-TEST(AppointmentTest, PrintRowScheduled)
+TEST(SysFull, ViewDoctorScheduleNoUser)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    EXPECT_NO_THROW(a.print_row());
+    HospitalSystem sys;
+    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
 }
 
-// covers else if(status == Cancelled) true branch in print_row()
-TEST(AppointmentTest, PrintRowCancelled)
+TEST(SysFull, ViewMyAppointmentsOtherPatient)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Cancelled);
-    EXPECT_NO_THROW(a.print_row());
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+    sys.registerNewPatient("p2", "p2@mail.com", "456", "011");
+
+    sys.login("p@mail.com", "123");
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    sys.login("p2@mail.com", "456");
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
 }
 
-// covers else branch in print_row() — status is Completed
-// also covers false branch of else if(status == Cancelled)
-TEST(AppointmentTest, PrintRowCompleted)
+TEST(SysFull, ViewDoctorScheduleOtherDoctor)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Scheduled);
-    a.complete();
-    EXPECT_NO_THROW(a.print_row());
+    HospitalSystem sys;
+    setupDoctor(sys);
+    sys.registerNewDoctor("d2", "d2@mail.com", "456", "neuro");
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    sys.login("d2@mail.com", "456");
+    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
 }
 
-// FIX: directly constructed Completed — ensures else if false branch is hit independently
-TEST(AppointmentTest, PrintRowDirectlyCompleted)
+/* ================= ADMIN ================= */
+
+TEST(SysFull, AdminStress)
 {
-    AppointmentInfo info{"p", "d", "2026", "10AM"};
-    Appointment a(1, 1, 1, info, Status::Completed);
-    EXPECT_NO_THROW(a.print_row());
+    SysTest sys;
+    EXPECT_FALSE(sys.adminViewAllUsers().empty());
 }
 
-/* ===================== GETTERS ===================== */
-
-// FIX: explicitly exercises all getters to ensure condition coverage on return values
-TEST(AppointmentTest, AllGetters)
+TEST(SysFull, AdminViewAllUsersOnlyAdmin)
 {
-    AppointmentInfo info{"Alice", "Bob", "2026-01-01", "9AM"};
-    Appointment a(10, 20, 30, info, Status::Scheduled);
-    EXPECT_EQ(a.get_AppointmentId(), 10);
-    EXPECT_EQ(a.get_PatientId(),     20);
-    EXPECT_EQ(a.get_DoctorId(),      30);
-    EXPECT_EQ(a.get_Date(),          "2026-01-01");
-    EXPECT_EQ(a.get_Time(),          "9AM");
-    EXPECT_EQ(a.get_Status(),        Status::Scheduled);
+    SysTest sys;
+    auto users = sys.adminViewAllUsers();
+    EXPECT_EQ(users.size(), 1u);
+    EXPECT_NE(users[0], nullptr);
+    EXPECT_EQ(users[0]->get_role(), "admin");
 }
+
+TEST(SysFull, AdminViewAllUsersWithData)
+{
+    SysTest sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    auto users = sys.adminViewAllUsers();
+    EXPECT_EQ(users.size(), 3u);
+
+    int adminCount = 0, doctorCount = 0, patientCount = 0;
+    for (auto *u : users)
+    {
+        ASSERT_NE(u, nullptr);
+        if (u->get_role() == "admin")   adminCount++;
+        if (u->get_role() == "doctor")  doctorCount++;
+        if (u->get_role() == "patient") patientCount++;
+    }
+    EXPECT_EQ(adminCount,   1);
+    EXPECT_EQ(doctorCount,  1);
+    EXPECT_EQ(patientCount, 1);
+}
+
+TEST(SysFull, AdminViewAllUsersManyUsers)
+{
+    SysTest sys;
+    sys.registerNewDoctor("d1", "d1@mail.com", "111", "cardio");
+    sys.registerNewDoctor("d2", "d2@mail.com", "222", "neuro");
+    sys.registerNewPatient("p1", "p1@mail.com", "333", "010");
+    sys.registerNewPatient("p2", "p2@mail.com", "444", "011");
+
+    auto users = sys.adminViewAllUsers();
+    EXPECT_EQ(users.size(), 5u);
+    for (auto *u : users)
+        EXPECT_NE(u, nullptr);
+}
+
+TEST(SysFull, AdminViewAllAppointments)
+{
+    SysTest sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+    EXPECT_FALSE(sys.adminViewAllAppointments().empty());
+}
+
+TEST(SysFull, AdminViewAllAppointmentsEmpty)
+{
+    SysTest sys;
+    EXPECT_TRUE(sys.adminViewAllAppointments().empty());
+}
+
+/* ================= STATE POISONING ================= */
+
+TEST(SysFull, StatePoisoning)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    EXPECT_FALSE(sys.login("bad", "bad"));
+    EXPECT_TRUE(sys.login("p@mail.com", "123"));
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    EXPECT_FALSE(sys.login("x", "y"));
+    EXPECT_FALSE(sys.viewMyAppointments().empty());
+}
+
+/* ================= INVALID INPUT BOMB ================= */
+
+TEST(SysFull, InvalidInputBomb)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
