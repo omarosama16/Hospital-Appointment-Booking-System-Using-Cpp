@@ -22,25 +22,24 @@ User *HospitalSystem::getCurrentUser() const
 
 Doctor *HospitalSystem::findDoctorById(int id)
 {
-    // Fix: const auto & — loop only reads each unique_ptr, never modifies it
-    for (const auto &u : allUsers)
+    // auto & (not const) — we need to return a mutable Doctor* from u.get()
+    for (auto &u : allUsers)
     {
         if (u->get_role() == "doctor")
         {
-            // Fix: pointer-to-const — only reading the Doctor to check its id
-            const Doctor *d = dynamic_cast<const Doctor *>(u.get());
+            Doctor *d = dynamic_cast<Doctor *>(u.get());
 
             if (d && d->get_id() == id)
-                return const_cast<Doctor *>(d);
+                return d;   // no const_cast needed
         }
     }
 
     return nullptr;
 }
 
-bool HospitalSystem::login(std::string e, std::string p)
+bool HospitalSystem::login(std::string_view e, std::string_view p)
 {
-    // Fix: const auto & — loop only reads each unique_ptr to authenticate
+    // const auto & — loop only reads each unique_ptr to authenticate
     for (const auto &u : allUsers)
     {
         if (u->Authenticate(e, p))
@@ -53,18 +52,18 @@ bool HospitalSystem::login(std::string e, std::string p)
     return false;
 }
 
-void HospitalSystem::registerNewPatient(std::string n,
-                                        std::string e,
-                                        std::string p,
-                                        std::string phone)
+void HospitalSystem::registerNewPatient(std::string_view n,
+                                        std::string_view e,
+                                        std::string_view p,
+                                        std::string_view phone)
 {
     allUsers.push_back(std::make_unique<Patient>(nextUserId++, n, e, p, phone));
 }
 
-void HospitalSystem::registerNewDoctor(std::string n,
-                                       std::string e,
-                                       std::string p,
-                                       std::string s)
+void HospitalSystem::registerNewDoctor(std::string_view n,
+                                       std::string_view e,
+                                       std::string_view p,
+                                       std::string_view s)
 {
     auto d = std::make_unique<Doctor>(nextUserId++, n, e, p, s);
 
@@ -75,8 +74,8 @@ void HospitalSystem::registerNewDoctor(std::string n,
 }
 
 bool HospitalSystem::bookAppointment(int docId,
-                                     std::string date,
-                                     std::string time)
+                                     std::string_view date,
+                                     std::string_view time)
 {
     if (!currentUser)
         return false;
@@ -84,13 +83,14 @@ bool HospitalSystem::bookAppointment(int docId,
     if (currentUser->get_role() != "patient")
         return false;
 
-    // Fix: pointer-to-const — d is only read to get the doctor's name
     const Doctor *d = findDoctorById(docId);
 
     if (!d)
         return false;
 
-    AppointmentInfo info{currentUser->get_name(), d->get_name(), date, time};
+    AppointmentInfo info{currentUser->get_name(), d->get_name(),
+                         std::string(date), std::string(time)};
+
     masterSchedule.push_back(Appointment(
         nextApptId++,
         currentUser->get_id(),
@@ -185,7 +185,7 @@ std::vector<User *> HospitalSystem::adminViewAllUsers()
     std::vector<User *> raw;
     raw.reserve(allUsers.size());
 
-    // Fix: const auto & — loop only reads each unique_ptr to extract raw pointer
+    // const auto & — loop only reads each unique_ptr to extract raw pointer
     for (const auto &u : allUsers)
         raw.push_back(u.get());
 
