@@ -10,7 +10,9 @@ HospitalSystem::HospitalSystem()
     nextApptId = 1;
     currentUser = nullptr;
 
-    allUsers.push_back(std::make_unique<Admin>(nextUserId++, "admin", "admin@mail.com", "admin123"));
+    // Fix: extract assignment from expression — increment separately
+    const int adminId = nextUserId++;
+    allUsers.push_back(std::make_unique<Admin>(adminId, "admin", "admin@mail.com", "admin123"));
 }
 
 // No destructor needed — unique_ptr cleans up automatically.
@@ -22,15 +24,15 @@ User *HospitalSystem::getCurrentUser() const
 
 Doctor *HospitalSystem::findDoctorById(int id)
 {
-    // auto & (not const) — we need to return a mutable Doctor* from u.get()
     for (auto &u : allUsers)
     {
         if (u->get_role() == "doctor")
         {
-            Doctor *d = dynamic_cast<Doctor *>(u.get());
+            // Fix: replace redundant type with auto
+            auto *d = dynamic_cast<Doctor *>(u.get());
 
             if (d && d->get_id() == id)
-                return d;   // no const_cast needed
+                return d;
         }
     }
 
@@ -39,7 +41,6 @@ Doctor *HospitalSystem::findDoctorById(int id)
 
 bool HospitalSystem::login(std::string_view e, std::string_view p)
 {
-    // const auto & — loop only reads each unique_ptr to authenticate
     for (const auto &u : allUsers)
     {
         if (u->Authenticate(e, p))
@@ -57,7 +58,9 @@ void HospitalSystem::registerNewPatient(std::string_view n,
                                         std::string_view p,
                                         std::string_view phone)
 {
-    allUsers.push_back(std::make_unique<Patient>(nextUserId++, n, e, p, phone));
+    // Fix: extract assignment from expression — increment separately
+    const int patientId = nextUserId++;
+    allUsers.push_back(std::make_unique<Patient>(patientId, n, e, p, phone));
 }
 
 void HospitalSystem::registerNewDoctor(std::string_view n,
@@ -65,7 +68,9 @@ void HospitalSystem::registerNewDoctor(std::string_view n,
                                        std::string_view p,
                                        std::string_view s)
 {
-    auto d = std::make_unique<Doctor>(nextUserId++, n, e, p, s);
+    // Fix: extract assignment from expression — increment separately
+    const int doctorId = nextUserId++;
+    auto d = std::make_unique<Doctor>(doctorId, n, e, p, s);
 
     d->addAvailability("10AM");
     d->addAvailability("11AM");
@@ -88,15 +93,17 @@ bool HospitalSystem::bookAppointment(int docId,
     if (!d)
         return false;
 
+    // Fix: extract assignment from expression — increment separately
+    const int apptId = nextApptId++;
     AppointmentInfo info{currentUser->get_name(), d->get_name(),
                          std::string(date), std::string(time)};
 
-    masterSchedule.push_back(Appointment(
-        nextApptId++,
-        currentUser->get_id(),
-        docId,
-        info,
-        Status::Scheduled));
+    // Fix: prefer emplace_back over push_back for in-place construction
+    masterSchedule.emplace_back(apptId,
+                                currentUser->get_id(),
+                                docId,
+                                info,
+                                Status::Scheduled);
 
     return true;
 }
@@ -114,7 +121,7 @@ bool HospitalSystem::cancelAppointmentPatient(int id)
             if (a.get_Status() != Status::Scheduled)
                 return false;
 
-            a.cancel();   // mutates — auto & is correct here
+            a.cancel();
             return true;
         }
     }
@@ -122,7 +129,8 @@ bool HospitalSystem::cancelAppointmentPatient(int id)
     return false;
 }
 
-std::vector<Appointment> HospitalSystem::viewMyAppointments()
+// Fix: declared const — method does not modify any member
+std::vector<Appointment> HospitalSystem::viewMyAppointments() const
 {
     std::vector<Appointment> res;
 
@@ -138,7 +146,8 @@ std::vector<Appointment> HospitalSystem::viewMyAppointments()
     return res;
 }
 
-std::vector<Appointment> HospitalSystem::viewDoctorSchedule()
+// Fix: declared const — method does not modify any member
+std::vector<Appointment> HospitalSystem::viewDoctorSchedule() const
 {
     std::vector<Appointment> res;
 
@@ -167,7 +176,7 @@ bool HospitalSystem::completeAppointmentDoctor(int id)
             if (a.get_Status() != Status::Scheduled)
                 return false;
 
-            a.complete();  // mutates — auto & is correct here
+            a.complete();
             return true;
         }
     }
@@ -175,17 +184,18 @@ bool HospitalSystem::completeAppointmentDoctor(int id)
     return false;
 }
 
-std::vector<Appointment> HospitalSystem::adminViewAllAppointments()
+// Fix: declared const — method does not modify any member
+std::vector<Appointment> HospitalSystem::adminViewAllAppointments() const
 {
     return masterSchedule;
 }
 
-std::vector<User *> HospitalSystem::adminViewAllUsers()
+// Fix: declared const — method does not modify any member
+std::vector<User *> HospitalSystem::adminViewAllUsers() const
 {
     std::vector<User *> raw;
     raw.reserve(allUsers.size());
 
-    // const auto & — loop only reads each unique_ptr to extract raw pointer
     for (const auto &u : allUsers)
         raw.push_back(u.get());
 
