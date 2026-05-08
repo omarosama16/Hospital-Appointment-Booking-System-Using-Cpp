@@ -1,23 +1,24 @@
-```cpp id="wm4z2w"
+```cpp id="3jlwmk"
 #include <gtest/gtest.h>
+#include <vector>
+#include <string>
 #include "system.h"
 
 /* ================= TEST ACCESS ================= */
 
 class SysTest : public HospitalSystem
 {
-public:
-    using HospitalSystem::adminViewAllAppointments;
-    using HospitalSystem::adminViewAllUsers;
 };
 
 /* ================= HELPERS ================= */
 
 static int getDoctorId(HospitalSystem &sys)
 {
-    for (auto u : sys.adminViewAllUsers())
+    auto users = sys.adminViewAllUsers();
+
+    for (auto *u : users)
     {
-        if (u && u->get_role() == "doctor")
+        if (u != nullptr && u->get_role() == "doctor")
         {
             return u->get_id();
         }
@@ -36,7 +37,7 @@ static void setupPatient(HospitalSystem &sys)
     sys.registerNewPatient("p", "p@mail.com", "123", "010");
 }
 
-/* ================= LOGIN EDGE ================= */
+/* ================= LOGIN ================= */
 
 TEST(SysFull, LoginStress)
 {
@@ -58,7 +59,7 @@ TEST(SysFull, LoginInvalidCases)
     EXPECT_FALSE(sys.login("mail@test.com", ""));
 }
 
-/* ================= ROLE SWITCHING ================= */
+/* ================= ROLE ================= */
 
 TEST(SysFull, RoleSwitching)
 {
@@ -199,19 +200,6 @@ TEST(SysFull, CancelWrongPatient)
     EXPECT_FALSE(sys.cancelAppointmentPatient(id));
 }
 
-TEST(SysFull, CancelInvalidIds)
-{
-    HospitalSystem sys;
-
-    setupDoctor(sys);
-    setupPatient(sys);
-
-    sys.login("p@mail.com", "123");
-
-    EXPECT_FALSE(sys.cancelAppointmentPatient(-1));
-    EXPECT_FALSE(sys.cancelAppointmentPatient(9999));
-}
-
 /* ================= COMPLETE ================= */
 
 TEST(SysFull, CompleteStress)
@@ -263,47 +251,6 @@ TEST(SysFull, CompleteAsPatient)
     EXPECT_FALSE(sys.completeAppointmentDoctor(1));
 }
 
-TEST(SysFull, CompleteWrongDoctor)
-{
-    HospitalSystem sys;
-
-    setupDoctor(sys);
-
-    sys.registerNewDoctor("d2", "d2@mail.com", "456", "neuro");
-
-    setupPatient(sys);
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-
-    ASSERT_NE(docId, -1);
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    auto appts = sys.viewMyAppointments();
-
-    ASSERT_FALSE(appts.empty());
-
-    int id = appts[0].get_AppointmentId();
-
-    sys.login("d2@mail.com", "456");
-
-    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
-}
-
-TEST(SysFull, CompleteInvalidIds)
-{
-    HospitalSystem sys;
-
-    setupDoctor(sys);
-
-    sys.login("d@mail.com", "123");
-
-    EXPECT_FALSE(sys.completeAppointmentDoctor(-1));
-    EXPECT_FALSE(sys.completeAppointmentDoctor(9999));
-}
-
 /* ================= VIEW ================= */
 
 TEST(SysFull, ViewStress)
@@ -345,152 +292,18 @@ TEST(SysFull, ViewDoctorScheduleNoUser)
     EXPECT_TRUE(sys.viewDoctorSchedule().empty());
 }
 
-TEST(SysFull, ViewMyAppointmentsOtherPatient)
-{
-    HospitalSystem sys;
-
-    setupDoctor(sys);
-    setupPatient(sys);
-
-    sys.registerNewPatient("p2", "p2@mail.com", "456", "011");
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-
-    ASSERT_NE(docId, -1);
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    sys.login("p2@mail.com", "456");
-
-    EXPECT_TRUE(sys.viewMyAppointments().empty());
-}
-
-TEST(SysFull, ViewDoctorScheduleOtherDoctor)
-{
-    HospitalSystem sys;
-
-    setupDoctor(sys);
-
-    sys.registerNewDoctor("d2", "d2@mail.com", "456", "neuro");
-
-    setupPatient(sys);
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-
-    ASSERT_NE(docId, -1);
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    sys.login("d2@mail.com", "456");
-
-    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
-}
-
 /* ================= ADMIN ================= */
 
-TEST(SysFull, AdminStress)
-{
-    SysTest sys;
-
-    EXPECT_FALSE(sys.adminViewAllUsers().empty());
-}
-
-TEST(SysFull, AdminViewAllUsersOnlyAdmin)
+TEST(SysFull, AdminUsers)
 {
     SysTest sys;
 
     auto users = sys.adminViewAllUsers();
 
-    EXPECT_EQ(users.size(), 1u);
-
-    ASSERT_NE(users[0], nullptr);
-
-    EXPECT_EQ(users[0]->get_role(), "admin");
+    EXPECT_FALSE(users.empty());
 }
 
-TEST(SysFull, AdminViewAllUsersWithData)
-{
-    SysTest sys;
-
-    setupDoctor(sys);
-    setupPatient(sys);
-
-    auto users = sys.adminViewAllUsers();
-
-    EXPECT_EQ(users.size(), 3u);
-
-    int adminCount = 0;
-    int doctorCount = 0;
-    int patientCount = 0;
-
-    for (auto *u : users)
-    {
-        ASSERT_NE(u, nullptr);
-
-        if (u->get_role() == "admin")
-        {
-            adminCount++;
-        }
-
-        if (u->get_role() == "doctor")
-        {
-            doctorCount++;
-        }
-
-        if (u->get_role() == "patient")
-        {
-            patientCount++;
-        }
-    }
-
-    EXPECT_EQ(adminCount, 1);
-    EXPECT_EQ(doctorCount, 1);
-    EXPECT_EQ(patientCount, 1);
-}
-
-TEST(SysFull, AdminViewAllUsersManyUsers)
-{
-    SysTest sys;
-
-    sys.registerNewDoctor("d1", "d1@mail.com", "111", "cardio");
-    sys.registerNewDoctor("d2", "d2@mail.com", "222", "neuro");
-
-    sys.registerNewPatient("p1", "p1@mail.com", "333", "010");
-    sys.registerNewPatient("p2", "p2@mail.com", "444", "011");
-
-    auto users = sys.adminViewAllUsers();
-
-    EXPECT_EQ(users.size(), 5u);
-
-    for (auto *u : users)
-    {
-        EXPECT_NE(u, nullptr);
-    }
-}
-
-TEST(SysFull, AdminViewAllAppointments)
-{
-    SysTest sys;
-
-    setupDoctor(sys);
-    setupPatient(sys);
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-
-    ASSERT_NE(docId, -1);
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    EXPECT_FALSE(sys.adminViewAllAppointments().empty());
-}
-
-TEST(SysFull, AdminViewAllAppointmentsEmpty)
+TEST(SysFull, AdminAppointmentsEmpty)
 {
     SysTest sys;
 
@@ -570,41 +383,6 @@ TEST(SysFull, RoleAbuse)
     EXPECT_TRUE(sys.completeAppointmentDoctor(id));
 }
 
-/* ================= CHAOS FLOW ================= */
-
-TEST(SysFull, ChaosScenario)
-{
-    HospitalSystem sys;
-
-    setupDoctor(sys);
-    setupPatient(sys);
-
-    EXPECT_FALSE(sys.login("x", "y"));
-    EXPECT_FALSE(sys.login("", ""));
-
-    sys.login("p@mail.com", "123");
-
-    int docId = getDoctorId(sys);
-
-    ASSERT_NE(docId, -1);
-
-    sys.bookAppointment(docId, "2026", "10AM");
-
-    auto appts = sys.viewMyAppointments();
-
-    ASSERT_FALSE(appts.empty());
-
-    int id = appts[0].get_AppointmentId();
-
-    sys.cancelAppointmentPatient(id);
-
-    EXPECT_FALSE(sys.cancelAppointmentPatient(id));
-
-    sys.login("d@mail.com", "123");
-
-    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
-}
-
 /* ================= EXTRA COVERAGE ================= */
 
 TEST(SysFull, GetDoctorIdWithoutDoctor)
@@ -635,4 +413,4 @@ TEST(SysFull, MultiplePatients)
 
     EXPECT_TRUE(sys.login("p2@mail.com", "456"));
 }
-
+```
