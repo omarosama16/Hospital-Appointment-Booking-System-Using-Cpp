@@ -26,10 +26,11 @@ Doctor *HospitalSystem::findDoctorById(int id)
     {
         if (u->get_role() == "doctor")
         {
-            Doctor *d = dynamic_cast<Doctor *>(u.get());
+            // Fix: pointer-to-const — findDoctorById does not modify the Doctor
+            const Doctor *d = dynamic_cast<const Doctor *>(u.get());
 
             if (d && d->get_id() == id)
-                return d;
+                return const_cast<Doctor *>(d); // cast back for callers that need non-const
         }
     }
 
@@ -127,7 +128,8 @@ std::vector<Appointment> HospitalSystem::viewMyAppointments()
     if (!currentUser)
         return res;
 
-    for (auto &a : masterSchedule)
+    // Fix: reference-to-const — loop does not modify appointments
+    for (const auto &a : masterSchedule)
     {
         if (a.get_PatientId() == currentUser->get_id())
             res.push_back(a);
@@ -143,7 +145,8 @@ std::vector<Appointment> HospitalSystem::viewDoctorSchedule()
     if (!currentUser)
         return res;
 
-    for (auto &a : masterSchedule)
+    // Fix: reference-to-const — loop does not modify appointments
+    for (const auto &a : masterSchedule)
     {
         if (a.get_DoctorId() == currentUser->get_id())
             res.push_back(a);
