@@ -178,4 +178,145 @@ TEST(SysFull, ViewStress)
     EXPECT_FALSE(sys.viewDoctorSchedule().empty());
 }
 
-// FIX: covers viewMyAppointm
+// FIX: covers viewMyAppointments with no current user
+TEST(SysFull, ViewMyAppointmentsNoUser)
+{
+    HospitalSystem sys;
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
+}
+
+// FIX: covers viewDoctorSchedule with no current user
+TEST(SysFull, ViewDoctorScheduleNoUser)
+{
+    HospitalSystem sys;
+    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
+}
+
+/* ================= ADMIN ================= */
+
+TEST(SysFull, AdminStress)
+{
+    SysTest sys;
+    EXPECT_FALSE(sys.adminViewAllUsers().empty());
+}
+
+// FIX: covers adminViewAllUsers with doctors and patients populated
+TEST(SysFull, AdminViewAllUsersWithData)
+{
+    SysTest sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    auto users = sys.adminViewAllUsers();
+    EXPECT_GE(users.size(), 3u); // admin + doctor + patient
+    EXPECT_NE(users[0], nullptr);
+}
+
+// FIX: covers adminViewAllAppointments with data
+TEST(SysFull, AdminViewAllAppointments)
+{
+    SysTest sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+    EXPECT_FALSE(sys.adminViewAllAppointments().empty());
+}
+
+// FIX: covers adminViewAllAppointments when empty
+TEST(SysFull, AdminViewAllAppointmentsEmpty)
+{
+    SysTest sys;
+    EXPECT_TRUE(sys.adminViewAllAppointments().empty());
+}
+
+/* ================= STATE POISONING ================= */
+
+TEST(SysFull, StatePoisoning)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    EXPECT_FALSE(sys.login("bad", "bad"));
+    EXPECT_TRUE(sys.login("p@mail.com", "123"));
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    EXPECT_FALSE(sys.login("x", "y"));
+    EXPECT_FALSE(sys.viewMyAppointments().empty());
+}
+
+/* ================= INVALID INPUT BOMB ================= */
+
+TEST(SysFull, InvalidInputBomb)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+
+    EXPECT_FALSE(sys.bookAppointment(-1, "", ""));
+    EXPECT_FALSE(sys.bookAppointment(99999, "bad", "bad"));
+    EXPECT_FALSE(sys.cancelAppointmentPatient(-1));
+    EXPECT_FALSE(sys.completeAppointmentDoctor(-1));
+}
+
+/* ================= ROLE ABUSE ================= */
+
+TEST(SysFull, RoleAbuse)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
+
+    sys.login("d@mail.com", "123");
+    EXPECT_TRUE(sys.completeAppointmentDoctor(id));
+}
+
+/* ================= CHAOS FLOW ================= */
+
+TEST(SysFull, ChaosScenario)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    EXPECT_FALSE(sys.login("x", "y"));
+    EXPECT_FALSE(sys.login("", ""));
+
+    sys.login("p@mail.com", "123");
+
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    auto appts = sys.viewMyAppointments();
+    int id = appts[0].get_AppointmentId();
+
+    sys.cancelAppointmentPatient(id);
+    EXPECT_FALSE(sys.cancelAppointmentPatient(id));
+
+    sys.login("d@mail.com", "123");
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
+}
