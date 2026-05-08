@@ -90,14 +90,12 @@ bool HospitalSystem::bookAppointment(int docId,
     if (!d)
         return false;
 
+    AppointmentInfo info{currentUser->get_name(), d->get_name(), date, time};
     masterSchedule.push_back(Appointment(
         nextApptId++,
         currentUser->get_id(),
         docId,
-        currentUser->get_name(),
-        d->get_name(),
-        date,
-        time,
+        info,
         Status::Scheduled));
 
     return true;
