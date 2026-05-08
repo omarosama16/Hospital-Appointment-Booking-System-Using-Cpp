@@ -5,7 +5,7 @@
 
 enum class Status { Scheduled, Cancelled, Completed };
 
-// Groups the name and scheduling strings so the constructor stays under 7 params
+// Groups the name and scheduling strings so the primary constructor stays under 7 params
 struct AppointmentInfo
 {
     std::string patientName;
@@ -18,8 +18,18 @@ class Appointment
 {
 public:
     Appointment();
-    // 5 parameters: appointmentId, patientId, doctorId, info, status
+
+    // Primary constructor — 5 params, satisfies the SonarCloud rule
     Appointment(int a, int p, int d, const AppointmentInfo &info, Status s);
+
+    // Convenience constructor for existing call sites (e.g. tests)
+    // Delegates to the primary constructor via AppointmentInfo
+    Appointment(int a, int p, int d,
+                std::string_view pa, std::string_view doc,
+                std::string_view da, std::string_view t,
+                Status s)
+        : Appointment(a, p, d, AppointmentInfo{std::string(pa), std::string(doc),
+                                               std::string(da), std::string(t)}, s) {}
 
     void cancel();
     void complete();
