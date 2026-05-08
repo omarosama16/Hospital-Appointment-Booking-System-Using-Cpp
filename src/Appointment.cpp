@@ -13,19 +13,14 @@ Appointment::Appointment()
 {
 }
 
-Appointment::Appointment(int a, int p, int d,
-                         std::string pa,
-                         std::string doc,
-                         std::string da,
-                         std::string t,
-                         Status s)
+Appointment::Appointment(int a, int p, int d, const AppointmentInfo &info, Status s)
     : appointmentid(a),
       patientid(p),
       doctorid(d),
-      patientname(pa),
-      doctorname(doc),
-      date(da),
-      time(t),
+      patientname(info.patientName),
+      doctorname(info.doctorName),
+      date(info.date),
+      time(info.time),
       status(s)
 {
 }
@@ -54,18 +49,16 @@ void Appointment::print_row() const
         s = "Completed";
 
     std::cout << appointmentid << " "
-              << patientname << " "
-              << doctorname << " "
-              << date << " "
-              << time << " "
-              << s << "\n";
+              << patientname   << " "
+              << doctorname    << " "
+              << date          << " "
+              << time          << " "
+              << s             << "\n";
 }
 
-int Appointment::get_AppointmentId() const { return appointmentid; }
-int Appointment::get_PatientId() const { return patientid; }
-int Appointment::get_DoctorId() const { return doctorid; }
-
-std::string Appointment::get_Date() const { return date; }
-std::string Appointment::get_Time() const { return time; }
-
-Status Appointment::get_Status() const { return status; }
+int         Appointment::get_AppointmentId() const { return appointmentid; }
+int         Appointment::get_PatientId()     const { return patientid; }
+int         Appointment::get_DoctorId()      const { return doctorid; }
+std::string Appointment::get_Date()          const { return date; }
+std::string Appointment::get_Time()          const { return time; }
+Status      Appointment::get_Status()        const { return status; }
