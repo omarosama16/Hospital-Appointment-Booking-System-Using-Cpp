@@ -10,12 +10,9 @@ HospitalSystem::HospitalSystem()
     nextApptId = 1;
     currentUser = nullptr;
 
-    // Fix: extract assignment from expression — increment separately
     const int adminId = nextUserId++;
     allUsers.push_back(std::make_unique<Admin>(adminId, "admin", "admin@mail.com", "admin123"));
 }
-
-// No destructor needed — unique_ptr cleans up automatically.
 
 User *HospitalSystem::getCurrentUser() const
 {
@@ -24,18 +21,15 @@ User *HospitalSystem::getCurrentUser() const
 
 Doctor *HospitalSystem::findDoctorById(int id)
 {
-    for (auto &u : allUsers)
+    for (const auto &u : allUsers)  // Fix: reference-to-const
     {
         if (u->get_role() == "doctor")
         {
-            // Fix: replace redundant type with auto
             auto *d = dynamic_cast<Doctor *>(u.get());
-
             if (d && d->get_id() == id)
                 return d;
         }
     }
-
     return nullptr;
 }
 
@@ -49,7 +43,6 @@ bool HospitalSystem::login(std::string_view e, std::string_view p)
             return true;
         }
     }
-
     return false;
 }
 
@@ -58,7 +51,6 @@ void HospitalSystem::registerNewPatient(std::string_view n,
                                         std::string_view p,
                                         std::string_view phone)
 {
-    // Fix: extract assignment from expression — increment separately
     const int patientId = nextUserId++;
     allUsers.push_back(std::make_unique<Patient>(patientId, n, e, p, phone));
 }
@@ -68,13 +60,10 @@ void HospitalSystem::registerNewDoctor(std::string_view n,
                                        std::string_view p,
                                        std::string_view s)
 {
-    // Fix: extract assignment from expression — increment separately
     const int doctorId = nextUserId++;
     auto d = std::make_unique<Doctor>(doctorId, n, e, p, s);
-
     d->addAvailability("10AM");
     d->addAvailability("11AM");
-
     allUsers.push_back(std::move(d));
 }
 
@@ -84,27 +73,22 @@ bool HospitalSystem::bookAppointment(int docId,
 {
     if (!currentUser)
         return false;
-
     if (currentUser->get_role() != "patient")
         return false;
 
     const Doctor *d = findDoctorById(docId);
-
     if (!d)
         return false;
 
-    // Fix: extract assignment from expression — increment separately
     const int apptId = nextApptId++;
     AppointmentInfo info{currentUser->get_name(), d->get_name(),
                          std::string(date), std::string(time)};
 
-    // Fix: prefer emplace_back over push_back for in-place construction
     masterSchedule.emplace_back(apptId,
                                 currentUser->get_id(),
                                 docId,
                                 info,
                                 Status::Scheduled);
-
     return true;
 }
 
@@ -120,20 +104,16 @@ bool HospitalSystem::cancelAppointmentPatient(int id)
         {
             if (a.get_Status() != Status::Scheduled)
                 return false;
-
             a.cancel();
             return true;
         }
     }
-
     return false;
 }
 
-// Fix: declared const — method does not modify any member
 std::vector<Appointment> HospitalSystem::viewMyAppointments() const
 {
     std::vector<Appointment> res;
-
     if (!currentUser)
         return res;
 
@@ -142,15 +122,12 @@ std::vector<Appointment> HospitalSystem::viewMyAppointments() const
         if (a.get_PatientId() == currentUser->get_id())
             res.push_back(a);
     }
-
     return res;
 }
 
-// Fix: declared const — method does not modify any member
 std::vector<Appointment> HospitalSystem::viewDoctorSchedule() const
 {
     std::vector<Appointment> res;
-
     if (!currentUser)
         return res;
 
@@ -159,14 +136,13 @@ std::vector<Appointment> HospitalSystem::viewDoctorSchedule() const
         if (a.get_DoctorId() == currentUser->get_id())
             res.push_back(a);
     }
-
     return res;
 }
 
-bool HospitalSystem::completeAppointmentDoctor(int id)
-{
-    if (!currentUser || currentUser->get_role() != "doctor")
+bool HospitalSystem::completeAppointmentDoctor(int id)rentUser || currentUser->get_role() != "doctor")
         return false;
+{
+    if (!cur
 
     for (auto &a : masterSchedule)
     {
@@ -175,29 +151,23 @@ bool HospitalSystem::completeAppointmentDoctor(int id)
         {
             if (a.get_Status() != Status::Scheduled)
                 return false;
-
             a.complete();
             return true;
         }
     }
-
     return false;
 }
 
-// Fix: declared const — method does not modify any member
 std::vector<Appointment> HospitalSystem::adminViewAllAppointments() const
 {
     return masterSchedule;
 }
 
-// Fix: declared const — method does not modify any member
 std::vector<User *> HospitalSystem::adminViewAllUsers() const
 {
     std::vector<User *> raw;
     raw.reserve(allUsers.size());
-
     for (const auto &u : allUsers)
         raw.push_back(u.get());
-
     return raw;
 }
