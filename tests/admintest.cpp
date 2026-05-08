@@ -67,6 +67,63 @@ TEST(AdminTest, Constructor_SpecialCharacters)
     EXPECT_EQ(a.get_role(),     "admin");
 }
 
+/* ================= COPY / MOVE OPERATIONS - FIX FOR 1 UNCOVERED CONDITION ================= */
+
+// Copy constructor - covers compiler-generated copy conditions
+TEST(AdminTest, CopyConstructor)
+{
+    Admin a1(1, "Omar", "omar@test.com", "1234");
+    Admin a2(a1);  // copy constructor
+    EXPECT_EQ(a2.get_id(),        1);
+    EXPECT_EQ(a2.get_name(),      "Omar");
+    EXPECT_EQ(a2.get_email(),     "omar@test.com");
+    EXPECT_EQ(a2.get_password(),  "1234");
+    EXPECT_EQ(a2.get_role(),      "admin");
+
+    // Verify independent copies
+    a2.set_name("Changed");
+    EXPECT_EQ(a1.get_name(), "Omar");
+    EXPECT_EQ(a2.get_name(), "Changed");
+}
+
+// Copy assignment - covers compiler-generated copy assignment conditions
+TEST(AdminTest, CopyAssignment)
+{
+    Admin a1(1, "Omar", "omar@test.com", "1234");
+    Admin a2(2, "Alice", "alice@test.com", "5678");
+    a2 = a1;  // copy assignment
+    EXPECT_EQ(a2.get_id(),        1);
+    EXPECT_EQ(a2.get_name(),      "Omar");
+    EXPECT_EQ(a2.get_email(),     "omar@test.com");
+    EXPECT_EQ(a2.get_password(),  "1234");
+    EXPECT_EQ(a2.get_role(),      "admin");
+}
+
+// Move constructor - covers compiler-generated move conditions
+TEST(AdminTest, MoveConstructor)
+{
+    Admin a1(1, "Omar", "omar@test.com", "1234");
+    Admin a2(std::move(a1));  // move constructor
+    EXPECT_EQ(a2.get_id(),       1);
+    EXPECT_EQ(a2.get_name(),     "Omar");
+    EXPECT_EQ(a2.get_email(),    "omar@test.com");
+    EXPECT_EQ(a2.get_password(), "1234");
+    EXPECT_EQ(a2.get_role(),     "admin");
+}
+
+// Move assignment - covers compiler-generated move assignment conditions
+TEST(AdminTest, MoveAssignment)
+{
+    Admin a1(1, "Omar", "omar@test.com", "1234");
+    Admin a2(2, "Alice", "alice@test.com", "5678");
+    a2 = std::move(a1);  // move assignment
+    EXPECT_EQ(a2.get_id(),       1);
+    EXPECT_EQ(a2.get_name(),     "Omar");
+    EXPECT_EQ(a2.get_email(),    "omar@test.com");
+    EXPECT_EQ(a2.get_password(), "1234");
+    EXPECT_EQ(a2.get_role(),     "admin");
+}
+
 /* ================= ROLE IS ALWAYS ADMIN ================= */
 
 TEST(AdminTest, RoleIsAlwaysAdmin)
