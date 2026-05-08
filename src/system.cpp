@@ -21,7 +21,7 @@ User *HospitalSystem::getCurrentUser() const
 
 Doctor *HospitalSystem::findDoctorById(int id)
 {
-    for (const auto &u : allUsers)  // Fix: reference-to-const
+    for (const auto &u : allUsers)
     {
         if (u->get_role() == "doctor")
         {
@@ -139,10 +139,11 @@ std::vector<Appointment> HospitalSystem::viewDoctorSchedule() const
     return res;
 }
 
-bool HospitalSystem::completeAppointmentDoctor(int id)rentUser || currentUser->get_role() != "doctor")
-        return false;
+// FIX: Line 142 — corrupted function signature restored
+bool HospitalSystem::completeAppointmentDoctor(int id)
 {
-    if (!cur
+    if (!currentUser || currentUser->get_role() != "doctor")
+        return false;
 
     for (auto &a : masterSchedule)
     {
