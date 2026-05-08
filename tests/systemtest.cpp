@@ -76,7 +76,7 @@ TEST(SysFull, BookingStress)
     EXPECT_FALSE(sys.bookAppointment(9999, "2026", "10AM"));
 }
 
-// FIX: covers bookAppointment with no current user
+// covers bookAppointment with no current user
 TEST(SysFull, BookAppointmentNoUser)
 {
     HospitalSystem sys;
@@ -84,7 +84,7 @@ TEST(SysFull, BookAppointmentNoUser)
     EXPECT_FALSE(sys.bookAppointment(2, "2026", "10AM"));
 }
 
-// FIX: covers bookAppointment when logged in as doctor (not patient)
+// covers bookAppointment when logged in as doctor (not patient)
 TEST(SysFull, BookAppointmentAsDoctor)
 {
     HospitalSystem sys;
@@ -116,11 +116,30 @@ TEST(SysFull, CancelStress)
     EXPECT_FALSE(sys.cancelAppointmentPatient(-1));
 }
 
-// FIX: covers cancelAppointmentPatient with no current user
+// covers cancelAppointmentPatient with no current user
 TEST(SysFull, CancelNoUser)
 {
     HospitalSystem sys;
     EXPECT_FALSE(sys.cancelAppointmentPatient(1));
+}
+
+// FIX: appointment id matches but patient id does not — false branch of && in cancelAppointmentPatient
+TEST(SysFull, CancelWrongPatient)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+    sys.registerNewPatient("p2", "p2@mail.com", "456", "011");
+
+    sys.login("p@mail.com", "123");
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+    sys.bookAppointment(docId, "2026", "10AM");
+    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    // different patient tries to cancel — id matches but patient id doesn't
+    sys.login("p2@mail.com", "456");
+    EXPECT_FALSE(sys.cancelAppointmentPatient(id));
 }
 
 /* ================= COMPLETE EDGE ================= */
@@ -148,11 +167,41 @@ TEST(SysFull, CompleteStress)
     EXPECT_FALSE(sys.completeAppointmentDoctor(-1));
 }
 
-// FIX: covers completeAppointmentDoctor with no current user
+// covers completeAppointmentDoctor with no current user — false branch of || left side
 TEST(SysFull, CompleteNoUser)
 {
     HospitalSystem sys;
     EXPECT_FALSE(sys.completeAppointmentDoctor(1));
+}
+
+// FIX: logged in as patient — covers false branch of || right side (role != "doctor")
+TEST(SysFull, CompleteAsPatient)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+    EXPECT_FALSE(sys.completeAppointmentDoctor(1));
+}
+
+// FIX: appointment id matches but doctor id does not — false branch of && in completeAppointmentDoctor
+TEST(SysFull, CompleteWrongDoctor)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
+    sys.registerNewDoctor("d2", "d2@mail.com", "456", "neuro");
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+    sys.bookAppointment(docId, "2026", "10AM");
+    int id = sys.viewMyAppointments()[0].get_AppointmentId();
+
+    // different doctor tries to complete — id matches but doctor id doesn't
+    sys.login("d2@mail.com", "456");
+    EXPECT_FALSE(sys.completeAppointmentDoctor(id));
 }
 
 /* ================= VIEW EDGE ================= */
@@ -178,17 +227,53 @@ TEST(SysFull, ViewStress)
     EXPECT_FALSE(sys.viewDoctorSchedule().empty());
 }
 
-// FIX: covers viewMyAppointments with no current user
+// covers viewMyAppointments with no current user
 TEST(SysFull, ViewMyAppointmentsNoUser)
 {
     HospitalSystem sys;
     EXPECT_TRUE(sys.viewMyAppointments().empty());
 }
 
-// FIX: covers viewDoctorSchedule with no current user
+// covers viewDoctorSchedule with no current user
 TEST(SysFull, ViewDoctorScheduleNoUser)
 {
     HospitalSystem sys;
+    EXPECT_TRUE(sys.viewDoctorSchedule().empty());
+}
+
+// FIX: appointments exist but belong to different patient — false branch of if in viewMyAppointments
+TEST(SysFull, ViewMyAppointmentsOtherPatient)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
+    setupPatient(sys);
+    sys.registerNewPatient("p2", "p2@mail.com", "456", "011");
+
+    sys.login("p@mail.com", "123");
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    // p2 logs in — loop runs but no appointments match
+    sys.login("p2@mail.com", "456");
+    EXPECT_TRUE(sys.viewMyAppointments().empty());
+}
+
+// FIX: appointments exist but belong to different doctor — false branch of if in viewDoctorSchedule
+TEST(SysFull, ViewDoctorScheduleOtherDoctor)
+{
+    HospitalSystem sys;
+    setupDoctor(sys);
+    sys.registerNewDoctor("d2", "d2@mail.com", "456", "neuro");
+    setupPatient(sys);
+
+    sys.login("p@mail.com", "123");
+    int docId = getDoctorId(sys);
+    ASSERT_NE(docId, -1);
+    sys.bookAppointment(docId, "2026", "10AM");
+
+    // d2 logs in — loop runs but no appointments match
+    sys.login("d2@mail.com", "456");
     EXPECT_TRUE(sys.viewDoctorSchedule().empty());
 }
 
@@ -200,7 +285,6 @@ TEST(SysFull, AdminStress)
     EXPECT_FALSE(sys.adminViewAllUsers().empty());
 }
 
-// FIX: covers adminViewAllUsers with doctors and patients populated
 TEST(SysFull, AdminViewAllUsersWithData)
 {
     SysTest sys;
@@ -208,11 +292,10 @@ TEST(SysFull, AdminViewAllUsersWithData)
     setupPatient(sys);
 
     auto users = sys.adminViewAllUsers();
-    EXPECT_GE(users.size(), 3u); // admin + doctor + patient
+    EXPECT_GE(users.size(), 3u);
     EXPECT_NE(users[0], nullptr);
 }
 
-// FIX: covers adminViewAllAppointments with data
 TEST(SysFull, AdminViewAllAppointments)
 {
     SysTest sys;
@@ -228,7 +311,6 @@ TEST(SysFull, AdminViewAllAppointments)
     EXPECT_FALSE(sys.adminViewAllAppointments().empty());
 }
 
-// FIX: covers adminViewAllAppointments when empty
 TEST(SysFull, AdminViewAllAppointmentsEmpty)
 {
     SysTest sys;
