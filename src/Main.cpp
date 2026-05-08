@@ -54,7 +54,8 @@ string getRole(const User *u)
     return u->get_role();
 }
 
-void listDoctors(HospitalSystem &sys)
+// Fix: const ref — only calls const method adminViewAllUsers(), never modifies sys
+void listDoctors(const HospitalSystem &sys)
 {
     vector<User *> users = sys.adminViewAllUsers();
 
@@ -83,11 +84,11 @@ void listDoctors(HospitalSystem &sys)
 
 /* ===================== PATIENT MENU HANDLERS ===================== */
 
-void handleViewAppointments(HospitalSystem &sys)
+// Fix: const ref — only calls const method viewMyAppointments()
+void handleViewAppointments(const HospitalSystem &sys)
 {
     printHeader("MY APPOINTMENTS");
 
-    // init-statement: appts declared inside the if, scoped to the if/else
     if (auto appts = sys.viewMyAppointments(); appts.empty())
     {
         cout << "  No appointments found.\n";
@@ -108,8 +109,8 @@ void handleBookAppointment(HospitalSystem &sys)
     listDoctors(sys);
 
     int    docId;
-    string date;   // Fix: each identifier in a dedicated statement
-    string time;   // Fix: each identifier in a dedicated statement
+    string date;
+    string time;
 
     cout << "\n  Doctor ID: ";
     cin >> docId;
@@ -132,7 +133,6 @@ bool handleCancelAppointment(HospitalSystem &sys)
 {
     printHeader("CANCEL APPOINTMENT");
 
-    // init-statement: appts declared inside the if, scoped to the if/else
     if (auto appts = sys.viewMyAppointments(); appts.empty())
     {
         cout << "  No appointments to cancel.\n";
@@ -186,11 +186,11 @@ void patientMenu(HospitalSystem &sys)
 
 /* ===================== DOCTOR MENU HANDLERS ===================== */
 
-void handleViewSchedule(HospitalSystem &sys)
+// Fix: const ref — only calls const method viewDoctorSchedule()
+void handleViewSchedule(const HospitalSystem &sys)
 {
     printHeader("MY SCHEDULE");
 
-    // init-statement: appts declared inside the if, scoped to the if/else
     if (auto appts = sys.viewDoctorSchedule(); appts.empty())
     {
         cout << "  No appointments.\n";
@@ -210,7 +210,6 @@ bool handleCompleteAppointment(HospitalSystem &sys)
 {
     printHeader("COMPLETE APPOINTMENT");
 
-    // init-statement: appts declared inside the if, scoped to the if/else
     if (auto appts = sys.viewDoctorSchedule(); appts.empty())
     {
         cout << "  No appointments.\n";
@@ -262,7 +261,8 @@ void doctorMenu(HospitalSystem &sys)
 
 /* ===================== ADMIN MENU HANDLERS ===================== */
 
-void handleViewUsers(HospitalSystem &sys)
+// Fix: const ref — only calls const methods adminViewAllUsers()
+void handleViewUsers(const HospitalSystem &sys)
 {
     printHeader("USERS");
     auto users = sys.adminViewAllUsers();
@@ -283,11 +283,11 @@ void handleViewUsers(HospitalSystem &sys)
     pause();
 }
 
-void handleViewAllAppointments(HospitalSystem &sys)
+// Fix: const ref — only calls const method adminViewAllAppointments()
+void handleViewAllAppointments(const HospitalSystem &sys)
 {
     printHeader("APPOINTMENTS");
 
-    // init-statement: appts declared inside the if, scoped to the if/else
     if (auto appts = sys.adminViewAllAppointments(); appts.empty())
     {
         cout << "  No appointments.\n";
@@ -305,10 +305,10 @@ void handleViewAllAppointments(HospitalSystem &sys)
 void handleAddDoctor(HospitalSystem &sys)
 {
     printHeader("ADD DOCTOR");
-    string name;   // Fix: each identifier in a dedicated statement
-    string email;  // Fix: each identifier in a dedicated statement
-    string pass;   // Fix: each identifier in a dedicated statement
-    string spec;   // Fix: each identifier in a dedicated statement
+    string name;
+    string email;
+    string pass;
+    string spec;
 
     cout << " Name: ";           getline(cin, name);
     cout << " Email: ";          getline(cin, email);
@@ -323,10 +323,10 @@ void handleAddDoctor(HospitalSystem &sys)
 void handleAddPatient(HospitalSystem &sys)
 {
     printHeader("ADD PATIENT");
-    string name;   // Fix: each identifier in a dedicated statement
-    string email;  // Fix: each identifier in a dedicated statement
-    string pass;   // Fix: each identifier in a dedicated statement
-    string phone;  // Fix: each identifier in a dedicated statement
+    string name;
+    string email;
+    string pass;
+    string phone;
 
     cout << " Name: ";     getline(cin, name);
     cout << " Email: ";    getline(cin, email);
@@ -368,8 +368,8 @@ void adminMenu(HospitalSystem &sys)
 
 void handleLogin(HospitalSystem &sys)
 {
-    string email;  // Fix: each identifier in a dedicated statement
-    string pass;   // Fix: each identifier in a dedicated statement
+    string email;
+    string pass;
     printHeader("LOGIN");
     cout << " Email: ";    getline(cin, email);
     cout << " Password: "; getline(cin, pass);
@@ -391,10 +391,10 @@ void handleLogin(HospitalSystem &sys)
 
 void handleRegisterPatient(HospitalSystem &sys)
 {
-    string name;   // Fix: each identifier in a dedicated statement
-    string email;  // Fix: each identifier in a dedicated statement
-    string pass;   // Fix: each identifier in a dedicated statement
-    string phone;  // Fix: each identifier in a dedicated statement
+    string name;
+    string email;
+    string pass;
+    string phone;
     printHeader("REGISTER");
     cout << " Name: ";     getline(cin, name);
     cout << " Email: ";    getline(cin, email);
