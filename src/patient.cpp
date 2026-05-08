@@ -1,9 +1,10 @@
 #include "Patient.h"
 
-Patient::Patient(int i, std::string n, std::string e, std::string p, std::string ph)
+Patient::Patient(int i, std::string_view n, std::string_view e,
+                 std::string_view p, std::string_view ph)
     : User(i, n, e, p, "patient"), phone(ph) {}
 
-void Patient::set_phone(std::string p)
+void Patient::set_phone(std::string_view p)
 {
     phone = p;
 }
