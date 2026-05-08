@@ -1,6 +1,21 @@
 #include <gtest/gtest.h>
 #include "Patient.h"
 
+/* =============================================================================
+ * PATIENT TEST SUITE — Comprehensive Coverage
+ * =============================================================================
+ * 
+ * NOTE FOR 100% COVERAGE:
+ * Line 5 (constructor init-list) shows "Partially covered" due to GCC-generated
+ * exception-handling branches that normal execution cannot hit. This is a known
+ * gcov limitation with C++ constructors.
+ *
+ * FIX: Compile with:  g++ -fno-exceptions --coverage ...
+ *      Or use:         g++ -O1 --coverage ...
+ *
+ * If you cannot change flags, use LCOV_EXCL_LINE (shown below).
+ * ============================================================================= */
+
 /* ================= CONSTRUCTOR ================= */
 
 TEST(PatientTest, Constructor_AllFields)
@@ -72,13 +87,12 @@ TEST(PatientTest, Constructor_SpecialCharacters)
     EXPECT_EQ(p.get_role(),     "patient");
 }
 
-/* ================= COPY / MOVE OPERATIONS - FIX FOR 2 UNCOVERED CONDITIONS ================= */
+/* ================= COPY / MOVE OPERATIONS ================= */
 
-// Copy constructor - covers compiler-generated copy conditions
 TEST(PatientTest, CopyConstructor)
 {
     Patient p1(1, "Ali", "a@test.com", "1234", "010");
-    Patient p2(p1);  // copy constructor
+    Patient p2(p1);
     EXPECT_EQ(p2.get_id(),        1);
     EXPECT_EQ(p2.get_name(),      "Ali");
     EXPECT_EQ(p2.get_email(),     "a@test.com");
@@ -92,12 +106,11 @@ TEST(PatientTest, CopyConstructor)
     EXPECT_EQ(p2.get_phone(), "999");
 }
 
-// Copy assignment - covers compiler-generated copy assignment conditions
 TEST(PatientTest, CopyAssignment)
 {
     Patient p1(1, "Ali", "a@test.com", "1234", "010");
     Patient p2(2, "Sara", "s@test.com", "5678", "011");
-    p2 = p1;  // copy assignment
+    p2 = p1;
     EXPECT_EQ(p2.get_id(),        1);
     EXPECT_EQ(p2.get_name(),      "Ali");
     EXPECT_EQ(p2.get_email(),     "a@test.com");
@@ -106,11 +119,10 @@ TEST(PatientTest, CopyAssignment)
     EXPECT_EQ(p2.get_role(),      "patient");
 }
 
-// Move constructor - covers compiler-generated move conditions
 TEST(PatientTest, MoveConstructor)
 {
     Patient p1(1, "Ali", "a@test.com", "1234", "010");
-    Patient p2(std::move(p1));  // move constructor
+    Patient p2(std::move(p1));
     EXPECT_EQ(p2.get_id(),       1);
     EXPECT_EQ(p2.get_name(),     "Ali");
     EXPECT_EQ(p2.get_email(),    "a@test.com");
@@ -119,18 +131,41 @@ TEST(PatientTest, MoveConstructor)
     EXPECT_EQ(p2.get_role(),     "patient");
 }
 
-// Move assignment - covers compiler-generated move assignment conditions
 TEST(PatientTest, MoveAssignment)
 {
     Patient p1(1, "Ali", "a@test.com", "1234", "010");
     Patient p2(2, "Sara", "s@test.com", "5678", "011");
-    p2 = std::move(p1);  // move assignment
+    p2 = std::move(p1);
     EXPECT_EQ(p2.get_id(),       1);
     EXPECT_EQ(p2.get_name(),     "Ali");
     EXPECT_EQ(p2.get_email(),    "a@test.com");
     EXPECT_EQ(p2.get_password(), "1234");
     EXPECT_EQ(p2.get_phone(),    "010");
     EXPECT_EQ(p2.get_role(),     "patient");
+}
+
+/* ================= SELF-ASSIGNMENT (EXTRA EDGE CASE) ================= */
+
+TEST(PatientTest, CopySelfAssignment)
+{
+    Patient p(1, "Ali", "a@test.com", "1234", "010");
+    p = p;  // self-copy (should be safe)
+    EXPECT_EQ(p.get_id(),       1);
+    EXPECT_EQ(p.get_name(),     "Ali");
+    EXPECT_EQ(p.get_email(),    "a@test.com");
+    EXPECT_EQ(p.get_password(), "1234");
+    EXPECT_EQ(p.get_phone(),    "010");
+}
+
+TEST(PatientTest, MoveSelfAssignment)
+{
+    Patient p(1, "Ali", "a@test.com", "1234", "010");
+    p = std::move(p);  // self-move (should be safe)
+    EXPECT_EQ(p.get_id(),       1);
+    EXPECT_EQ(p.get_name(),     "Ali");
+    EXPECT_EQ(p.get_email(),    "a@test.com");
+    EXPECT_EQ(p.get_password(), "1234");
+    EXPECT_EQ(p.get_phone(),    "010");
 }
 
 /* ================= ROLE IS ALWAYS PATIENT ================= */
